@@ -246,12 +246,6 @@ When working on this project:
 **Contents:** API features that have been completed  
 **Updated:** October 3, 2025
 
-#### `backend_api_endpoints.md`
-**Path:** `docs/backend_api_endpoints.md`  
-**Purpose:** Backend API endpoints reference  
-**Contents:** Server-side API routes  
-**Updated:** October 3, 2025
-
 ---
 
 ### **8. Agent Logs**
@@ -268,6 +262,10 @@ When working on this project:
 
 ### October 3, 2025
 - ✅ Fixed WPM calculation to use MonkeyType's Gross WPM formula
+- ✅ Implemented real-time character-level accuracy calculation
+- ✅ Created MAIN.md as central AI knowledge base
+- ✅ Consolidated API documentation - removed duplicates (API_ENDPOINTS1.md, backend_api_endpoints.md, docs/README.md)
+- ✅ Updated API_ENDPOINTS.md as single source of truth for all API documentation
 - ✅ Implemented real-time character-level accuracy
 - ✅ Fixed MonkeyType behavior (original text preservation, empty spacebar block)
 - ✅ Removed visual transitions for butter-smooth typing experience

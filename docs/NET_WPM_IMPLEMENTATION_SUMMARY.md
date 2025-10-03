@@ -1,10 +1,28 @@
 # Net WPM Implementation Complete - Summary
 
 **Date:** October 3, 2025  
-**Status:** ✅ **IMPLEMENTED**  
-**Build Status:** ✅ Zero TypeScript Errors
+**Status:** ⚠️ **DEPRECATED - Changed to Gross WPM (MonkeyType Formula)**  
+**Current Implementation:** See `WPM_ACCURACY_ANALYSIS.md`
 
 ---
+
+## ⚠️ **IMPORTANT NOTICE**
+
+**This implementation has been replaced!**
+
+After user testing, we discovered that Net WPM was too strict and didn't match MonkeyType's standard formula. 
+
+**Current Formula (as of October 3, 2025):**
+- **WPM:** Gross WPM = `(all_characters_typed / 5) / time_in_minutes`
+- **Accuracy:** Separate metric = `(correct_characters / total_characters) * 100`
+
+**See:** `WPM_ACCURACY_ANALYSIS.md` for current implementation details.
+
+---
+
+## 📜 **Historical Documentation (Net WPM - No Longer Used)**
+
+This document is kept for historical reference only.
 
 ## 🎯 **Changes Implemented**
 
