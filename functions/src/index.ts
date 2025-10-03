@@ -95,23 +95,6 @@ Remember: Generate ONLY the typing test content as a single paragraph. Do not in
 */
 
 /**
- * This function has been replaced by the Gemini AI implementation in genkit_functions.ts
- * Keeping this as a fallback in case the AI service is unavailable
- */
-function generatePlaceholderContent(topic: string, difficulty: string): string {
-  // Promotional fallback content - creates engaging typing test even when AI is temporarily unavailable
-  const promoText = `🚀 BLACK FRIDAY SPECIAL! Upgrade to ZenType Pro and unlock unlimited AI-generated tests on any topic you love! ` +
-    `For a limited time only: Get 73% OFF - just $3/month! ✨ ` +
-    `Type faster, learn more, and customize every practice session. ` +
-    `Pro features include: Unlimited AI tests, Advanced analytics, Custom difficulty levels, Priority support, and Ad-free experience. ` +
-    `Don't miss out on this exclusive Black Friday deal! Your typing skills deserve the best. ` +
-    `Join thousands of satisfied users who've already upgraded to Pro. ` +
-    `This message appears because we're experiencing high demand. Upgrade now and never see limits again!`;
-  
-  return promoText;
-}
-
-/**
  * Secure Cloud Function to submit test results
  * Validates data, saves to Firestore, and updates user stats
  */
@@ -513,15 +496,23 @@ export const generateAiTest = onCall({
         userInterestsCount: requestData.userInterests?.length || 0
       });
     } catch (error) {
-      // Fall back to placeholder content if Gemini fails
-      logger.error("🚨 DEBUG: Gemini AI failed, falling back to placeholder", {
+      // AI service failed - throw error to frontend to show modal
+      logger.error("🚨 DEBUG: Gemini AI failed", {
         userId,
         error: error instanceof Error ? error.message : String(error),
         errorStack: error instanceof Error ? error.stack : undefined,
-        step: "GEMINI_FAILED_FALLBACK"
+        step: "GEMINI_FAILED"
       });
       
-      generatedText = generatePlaceholderContent(requestData.topic, requestData.difficulty);
+      // Throw specific error code for frontend to handle
+      throw new HttpsError(
+        "unavailable",
+        "AI service is temporarily busy. Please try again or use a practice test.",
+        {
+          code: "AI_SERVICE_UNAVAILABLE",
+          retryable: true
+        }
+      );
     }
     
     logger.debug("✅ DEBUG: Gemini AI content generated", {

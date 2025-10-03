@@ -47,6 +47,7 @@ When working on this project:
 - `WORD_BASED_TYPING_IMPLEMENTATION_COMPLETE.md` - Word-based typing system
 - `WORD_BASED_TYPING_MIGRATION_PLAN.md` - Migration strategy
 - `ZENTYPE_AUTO_SAVE_SUCCESS_SUMMARY.md` - Auto-save implementation
+- `MODAL_SYSTEM_IMPLEMENTATION.md` - **NEW** - Modal system for AI failures and promotions
 
 ### **Development Guides**
 - `DEBUG_GUIDE.md` - Debug logging system
@@ -150,6 +151,13 @@ When working on this project:
 **Purpose:** Auto-save AI tests feature documentation  
 **Contents:** User preferences for auto-saving AI generated tests  
 **Status:** ✅ COMPLETED  
+**Updated:** October 3, 2025
+
+#### `MODAL_SYSTEM_IMPLEMENTATION.md` **NEW**
+**Path:** `docs/MODAL_SYSTEM_IMPLEMENTATION.md`  
+**Purpose:** Modal system for AI failures and promotional campaigns  
+**Contents:** ZenTypeModal component, error handling flow, promotional modals, practice test redirect  
+**Status:** ✅ COMPLETED - Deployed to production  
 **Updated:** October 3, 2025
 
 #### `AI_TEST_GENERATION_GUIDE.md`
@@ -278,20 +286,31 @@ When working on this project:
 
 ## 🔄 **Recent Changes Log**
 
-### October 3, 2025 (Latest)
+### October 3, 2025 (Latest - Modal System)
+- ✅ **Created Modal System** - Professional modal popups for AI failures and promotions (NordVPN-style)
+  - New component: `components/ui/zentype-modal.tsx` (180+ lines)
+  - Blurred backdrop, polymorphic gradient borders, theme-aware
+  - Two modal types: promotional (AI failure) and error (general errors)
+  - Updated Cloud Functions to throw HttpsError instead of fallback text
+  - Integrated modal into test page with proper error handling
+  - Added debug logging for all modal interactions
+  - Documentation: `MODAL_SYSTEM_IMPLEMENTATION.md`
+- ✅ **Deployed to Production** - All changes live on Firebase Cloud Functions
+
+### October 3, 2025 (Earlier - Rate Limiting & Deployment)
 - ✅ **Rate Limiting Disabled** - Temporarily removed rate limits for testing phase
   - Unlimited AI test generations for all users
   - Unlimited test result submissions
   - Preparing for subscription-based limits (Free vs Pro tiers)
-- ✅ **Promotional Fallback Message** - Updated AI fallback content
-  - Black Friday special: 73% OFF ($3/month)
-  - Engaging promotional copy instead of technical error messages
+- ✅ **Promotional Fallback Message** - DEPRECATED (replaced by modal system)
+  - ~~Black Friday special: 73% OFF ($3/month)~~
+  - Now showing professional modal instead of text in typing area
 - ✅ **Updated DEBUG_GUIDE.md** - Documented rate limiting changes
 - ✅ **Added Production URL** - https://zentype-v0--solotype-23c1f.europe-west4.hosted.app/
 - ✅ **Created .firebaseignore** - Excludes docs/ from App Hosting deployment
 - ✅ **Added Table of Contents** - Quick navigation for AI assistants
 
-### October 3, 2025 (Earlier)
+### October 3, 2025 (Earlier - WPM Fix)
 - ✅ Fixed WPM calculation to use MonkeyType's Gross WPM formula
 - ✅ Implemented real-time character-level accuracy calculation
 - ✅ Created MAIN.md as central AI knowledge base

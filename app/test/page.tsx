@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useRef, useCallback, useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -17,6 +17,7 @@ import { functions } from "@/lib/firebase/client"
 import { useDebugLogger } from "@/context/DebugProvider"
 import { useCorrelationId } from "@/hooks/useCorrelationId"
 import { useUserPreferences } from "@/hooks/useUserPreferences"
+import { ZenTypeModal } from "@/components/ui/zentype-modal"
 // Removed Cloud Function imports - now using Next.js API route
 
 export default function TestPage(): JSX.Element | null {
@@ -42,11 +43,16 @@ export default function TestPage(): JSX.Element | null {
   
   // Core state management
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [view, setView] = useState<'config' | 'active' | 'results'>('config');
   const [selectedTime, setSelectedTime] = useState(60);
   const [textToType, setTextToType] = useState("");
   const [status, setStatus] = useState<'waiting' | 'running' | 'paused' | 'finished'>('waiting');
   const [timeLeft, setTimeLeft] = useState(60);
+  
+  // Modal state for AI failures and promotions
+  const [showModal, setShowModal] = useState(false);
+  const [modalType, setModalType] = useState<'promotional' | 'error'>('promotional');
   
   // Word-based typing state (NEW)
   const [words, setWords] = useState<string[]>([]);
@@ -666,6 +672,13 @@ export default function TestPage(): JSX.Element | null {
         difficulty: selectedDifficulty
       });
 
+      // Log modal interaction to debug utility
+      debugLogger.logUserInteraction('error', 'AI Generation Failed', {
+        errorCode: error?.code,
+        errorMessage: error?.message,
+        willShowModal: true
+      });
+
       // End the flow with failure
       debugLogger.endFlow(flowId, false, {
         error: error?.message || 'Unknown error',
@@ -673,9 +686,28 @@ export default function TestPage(): JSX.Element | null {
         errorDetails: error?.details
       });
 
-      // Show user-friendly error message
-      const userMessage = error?.message || 'Unknown error occurred during test generation';
-      alert(`Failed to generate test: ${userMessage}`);
+      // Check if this is an AI service unavailable error (Gemini API failure)
+      if (error?.code === 'unavailable' || error?.details?.code === 'AI_SERVICE_UNAVAILABLE') {
+        // Show promotional modal for AI service failures
+        setModalType('promotional');
+        setShowModal(true);
+        
+        debugLogger.logUserInteraction('modal_shown', 'AI Service Unavailable Promotional Modal', {
+          trigger: 'ai_generation_failure',
+          errorCode: error?.code,
+          modalType: 'promotional'
+        });
+      } else {
+        // Show error modal for other failures
+        setModalType('error');
+        setShowModal(true);
+        
+        debugLogger.logUserInteraction('modal_shown', 'AI Generation Error Modal', {
+          trigger: 'ai_generation_failure',
+          errorCode: error?.code,
+          modalType: 'error'
+        });
+      }
     } finally {
       setIsGenerating(false);
       debugLogger.addToFlow(flowId, 'info', 'AI generation process cleanup completed', {
@@ -1126,6 +1158,66 @@ export default function TestPage(): JSX.Element | null {
     setView('config');
     setStatus('waiting');
   }, []);
+
+  // Modal action handlers
+  const handleUsePracticeTest = useCallback(() => {
+    debugLogger.logUserInteraction('clicked', 'Use Practice Test Button', {
+      source: 'modal',
+      modalType,
+      previousTab: activeTab
+    });
+
+    // Close modal
+    setShowModal(false);
+
+    // Switch to practice tab
+    setActiveTab('practice');
+
+    debugLogger.logUserInteraction('tab_switched', 'Practice Tab', {
+      trigger: 'modal_action',
+      from: activeTab,
+      to: 'practice'
+    });
+  }, [debugLogger, modalType, activeTab]);
+
+  const handleGetProOffer = useCallback(() => {
+    debugLogger.logUserInteraction('clicked', 'Get Pro Offer Button', {
+      source: 'modal',
+      modalType,
+      offer: '73% OFF Black Friday'
+    });
+
+    // TODO: Implement checkout flow (Stripe/Paddle integration)
+    // For now, log the interaction
+    console.log('🛒 Pro offer clicked - checkout flow to be implemented');
+    
+    // Close modal
+    setShowModal(false);
+
+    alert('Checkout system coming soon! Pro features will include unlimited AI tests, advanced statistics, and more.');
+  }, [debugLogger, modalType]);
+
+  const handleModalClose = useCallback(() => {
+    debugLogger.logUserInteraction('modal_closed', 'AI Modal Closed', {
+      modalType,
+      method: 'user_action'
+    });
+
+    setShowModal(false);
+  }, [debugLogger, modalType]);
+
+  const handleTryAgainError = useCallback(() => {
+    debugLogger.logUserInteraction('clicked', 'Try Again Button', {
+      source: 'error_modal',
+      previousError: 'ai_generation_failed'
+    });
+
+    // Close modal
+    setShowModal(false);
+
+    // User can try generating again with the same topic
+    console.log('🔄 User will retry AI generation with same parameters');
+  }, [debugLogger]);
 
   // Core typing engine - WORD-BASED TRACKING
   const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -1734,6 +1826,40 @@ export default function TestPage(): JSX.Element | null {
             </GlassCard>
           </div>
         </main>
+
+        {/* ZenType Modal for AI failures and promotions */}
+        <ZenTypeModal
+          isOpen={showModal}
+          onClose={handleModalClose}
+          type={modalType}
+          title={
+            modalType === 'promotional'
+              ? '🎉 Unlimited AI Tests with Pro'
+              : '❌ AI Generation Failed'
+          }
+          description={
+            modalType === 'promotional'
+              ? 'Our AI service is experiencing high demand. Upgrade to ZenType Pro for priority access and unlimited AI-generated tests!'
+              : 'Something went wrong while generating your test. Please try again or use a practice test instead.'
+          }
+          primaryAction={
+            modalType === 'promotional'
+              ? {
+                  label: 'Get Pro - 73% OFF',
+                  onClick: handleGetProOffer,
+                  variant: 'default' as const
+                }
+              : {
+                  label: 'Try Again',
+                  onClick: handleTryAgainError,
+                  variant: 'default' as const
+                }
+          }
+          secondaryAction={{
+            label: 'Use Practice Test',
+            onClick: handleUsePracticeTest
+          }}
+        />
       </div>
     );
   }
