@@ -47,6 +47,15 @@ export default function TestPage(): JSX.Element | null {
   const [textToType, setTextToType] = useState("");
   const [status, setStatus] = useState<'waiting' | 'running' | 'paused' | 'finished'>('waiting');
   const [timeLeft, setTimeLeft] = useState(60);
+  
+  // Word-based typing state (NEW)
+  const [words, setWords] = useState<string[]>([]);
+  const [currentWordIndex, setCurrentWordIndex] = useState(0);
+  const [userWordInput, setUserWordInput] = useState("");
+  const [completedWords, setCompletedWords] = useState<string[]>([]);
+  const [wordErrors, setWordErrors] = useState<{ [wordIndex: number]: boolean }>({}); // Track which words have errors
+  
+  // Legacy state for compatibility (will be derived from word-based state)
   const [userInput, setUserInput] = useState("");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [errors, setErrors] = useState(0);
@@ -89,6 +98,24 @@ export default function TestPage(): JSX.Element | null {
 
   // Client-side mount state to prevent hydration issues
   const [isMounted, setIsMounted] = useState(false);
+
+  // Helper function to calculate correct characters (for accurate WPM)
+  // Compares user's typed text against original word character-by-character
+  const calculateCorrectCharacters = useCallback((typedWords: string[], targetWords: string[]) => {
+    let correctChars = 0;
+    typedWords.forEach((typedWord, wordIndex) => {
+      const targetWord = targetWords[wordIndex];
+      if (targetWord) {
+        const minLength = Math.min(typedWord.length, targetWord.length);
+        for (let i = 0; i < minLength; i++) {
+          if (typedWord[i] === targetWord[i]) {
+            correctChars++;
+          }
+        }
+      }
+    });
+    return correctChars;
+  }, []);
 
   // Handle client-side mounting
   useEffect(() => {
@@ -368,9 +395,15 @@ export default function TestPage(): JSX.Element | null {
     
     // Update the text to type with selected test content - THIS IS CRITICAL
     setTextToType(test.text);
+    
+    // Split text into words for word-based tracking
+    const wordArray = test.text.split(' ');
+    setWords(wordArray);
+    
     debugLogger.addToFlow(flowId, 'info', 'Test text content loaded', {
       textLength: test.text.length,
-      textPreview: test.text.substring(0, 100) + "&hellip;"
+      textPreview: test.text.substring(0, 100) + "&hellip;",
+      wordCount: wordArray.length
     });
     
     // Update current test ID (critical for result saving)
@@ -379,7 +412,13 @@ export default function TestPage(): JSX.Element | null {
       currentTestId: test.id
     });
     
-    // Clear any existing user input and reset typing state
+    // Clear any existing user input and reset typing state (word-based)
+    setCurrentWordIndex(0);
+    setUserWordInput("");
+    setCompletedWords([]);
+    setWordErrors({});
+    
+    // Legacy state reset for compatibility
     setUserInput("");
     setCurrentIndex(0);
     setErrors(0);
@@ -594,6 +633,11 @@ export default function TestPage(): JSX.Element | null {
       // Auto-select the AI test for better UX (user doesn't need to click the card)
       console.log('🤖 Auto-selecting the generated AI test');
       setTextToType(generatedTest.text);
+      
+      // Split text into words for word-based tracking
+      const wordArray = generatedTest.text.split(' ');
+      setWords(wordArray);
+      
       setCurrentTestId(generatedTest.id);
       
       debugLogger.addToFlow(flowId, 'info', 'AI test auto-selected for user', {
@@ -683,11 +727,21 @@ export default function TestPage(): JSX.Element | null {
     console.log('🔄 UPDATING textToType with AI content...');
     setTextToType(aiTest.text);
     
+    // Split text into words for word-based tracking
+    const wordArray = aiTest.text.split(' ');
+    setWords(wordArray);
+    
     console.log('🆔 UPDATING currentTestId...');
     setCurrentTestId(aiTest.id);
     
-    // Clear any existing user input and reset typing state
+    // Clear any existing user input and reset typing state (word-based)
     console.log('🔄 RESETTING typing state...');
+    setCurrentWordIndex(0);
+    setUserWordInput("");
+    setCompletedWords([]);
+    setWordErrors({});
+    
+    // Legacy state reset for compatibility
     setUserInput("");
     setCurrentIndex(0);
     setErrors(0);
@@ -747,19 +801,42 @@ export default function TestPage(): JSX.Element | null {
       intervalRef.current = null;
     }
     
-    // Calculate final results for display (for both authenticated and guest users)
+    // Calculate final results from word-based state
     const timeTaken = Math.max(1, selectedTime - timeLeft); // Ensure minimum 1 second
+    const timeInMinutes = timeTaken / 60;
     
-    // Calculate WPM safely - handle division by zero
+    // Join completed words to get full user input for stats and API
+    // CRITICAL: Add current word if user is mid-typing when test ends
+    const allTypedWords = userWordInput.length > 0 
+      ? [...completedWords, userWordInput]
+      : completedWords;
+    const fullUserInput = allTypedWords.join(' ');
+    const totalErrors = Object.keys(wordErrors).length; // Count words with errors
+    
+    // Calculate correct characters for accuracy
+    const correctChars = calculateCorrectCharacters(completedWords, words);
+    
+    console.log('📊 Final stats calculation:', {
+      completedWords: completedWords.length,
+      currentWordInput: userWordInput,
+      fullUserInput: fullUserInput,
+      fullUserInputLength: fullUserInput.length,
+      totalErrors: totalErrors,
+      correctCharacters: correctChars,
+      calculationMethod: 'Gross WPM (MonkeyType formula)'
+    });
+    
+    // MonkeyType Formula: WPM = (all characters typed / 5) / time_in_minutes
+    // This is GROSS WPM - includes all characters (correct + incorrect)
     let wpm = 0;
-    if (timeTaken > 0 && userInput.length > 0) {
-      wpm = Math.round((userInput.length / 5) / (timeTaken / 60));
+    if (timeInMinutes > 0 && fullUserInput.length > 0) {
+      wpm = Math.round((fullUserInput.length / 5) / timeInMinutes);
     }
     
-    // Calculate accuracy safely - handle division by zero
+    // Accuracy = (correct characters / total characters) * 100
     let accuracy = 0;
-    if (userInput.length > 0) {
-      accuracy = Math.round(((userInput.length - errors) / userInput.length) * 100);
+    if (fullUserInput.length > 0) {
+      accuracy = Math.round((correctChars / fullUserInput.length) * 100);
     }
     
     // Ensure values are valid numbers (not NaN or Infinity)
@@ -780,24 +857,26 @@ export default function TestPage(): JSX.Element | null {
       });
 
       try {
+        // CRITICAL FIX: Use calculated values, not legacy state
         const testResultData = {
           wpm: wpm,
           accuracy: accuracy,
-          errors: Math.max(0, errors), // Ensure errors is not negative
-          timeTaken: Math.max(0, timeTaken), // Ensure timeTaken is not negative
-          textLength: Math.max(0, textToType.length), // Ensure textLength is not negative
-          userInput: userInput || '', // Ensure userInput is a string
-          testType: activeTab === 'ai' ? 'ai-generated' : 'practice', // Dynamic test type based on active tab
-          difficulty: selectedDifficulty || 'Medium', // Ensure difficulty has a default and matches expected values
-          testId: currentTestId || `practice_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // Ensure testId exists and is unique
+          errors: Math.max(0, totalErrors), // Use calculated totalErrors
+          timeTaken: Math.max(0, timeTaken),
+          textLength: Math.max(0, textToType.length),
+          userInput: fullUserInput || '', // Use calculated fullUserInput
+          testType: activeTab === 'ai' ? 'ai-generated' : 'practice',
+          difficulty: selectedDifficulty || 'Medium',
+          testId: currentTestId || `practice_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         };
 
         debugLogger.addToFlow(flowId, 'info', 'Test result data prepared for submission', {
           wpm,
           accuracy,
-          errors,
+          errors: totalErrors,
           timeTaken,
           textLength: textToType.length,
+          userInputLength: fullUserInput.length,
           testType: testResultData.testType,
           difficulty: testResultData.difficulty,
           testId: testResultData.testId,
@@ -810,9 +889,10 @@ export default function TestPage(): JSX.Element | null {
         debugLogger.addToFlow(flowId, 'debug', 'Data validation check', {
           wpmValid: typeof wpm === 'number' && !isNaN(wpm),
           accuracyValid: typeof accuracy === 'number' && !isNaN(accuracy),
-          errorsValid: typeof errors === 'number' && !isNaN(errors),
+          errorsValid: typeof totalErrors === 'number' && !isNaN(totalErrors),
           timeTakenValid: typeof timeTaken === 'number' && !isNaN(timeTaken),
-          textLengthValid: typeof textToType.length === 'number' && !isNaN(textToType.length)
+          textLengthValid: typeof textToType.length === 'number' && !isNaN(textToType.length),
+          userInputValid: typeof fullUserInput === 'string' && fullUserInput.length > 0
         });
 
         // Log API call
@@ -918,7 +998,7 @@ export default function TestPage(): JSX.Element | null {
     // Reset the ending flag at the very end
     isEndingTestRef.current = false;
     console.log('✅ endTest completed - reset ending flag');
-  }, [user, selectedTime, timeLeft, userInput, textToType, errors, selectedDifficulty, currentTestId, status]);
+  }, [user, selectedTime, timeLeft, userInput, textToType, errors, selectedDifficulty, currentTestId, status, completedWords, words, calculateCorrectCharacters, wordErrors, userWordInput]);
 
   // Update the ref whenever endTest changes
   useEffect(() => {
@@ -1007,6 +1087,13 @@ export default function TestPage(): JSX.Element | null {
       });
     }
     
+    // Reset word-based state
+    setCurrentWordIndex(0);
+    setUserWordInput("");
+    setCompletedWords([]);
+    setWordErrors({});
+    
+    // Reset legacy state for compatibility
     setUserInput("");
     setCurrentIndex(0);
     setErrors(0);
@@ -1040,7 +1127,7 @@ export default function TestPage(): JSX.Element | null {
     setStatus('waiting');
   }, []);
 
-  // Core typing engine - SIMPLE AND RELIABLE
+  // Core typing engine - WORD-BASED TRACKING
   const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
     event.preventDefault();
     
@@ -1057,32 +1144,67 @@ export default function TestPage(): JSX.Element | null {
       return;
     }
 
-    // Handle character input
-    if (key.length === 1) {
-      const targetChar = textToType[currentIndex];
-      const isCorrect = key === targetChar;
-      
-      if (!isCorrect) {
-        setErrors(prev => prev + 1);
+    const currentWord = words[currentWordIndex];
+    
+    // Handle SPACE - commit current word and advance
+    // CRITICAL: Prevent spacebar if no input (MonkeyType behavior)
+    if (key === ' ') {
+      // Block spacebar if user hasn't typed anything yet
+      if (userWordInput.length === 0) {
+        console.log('🚫 Blocked empty spacebar - user must type at least one character');
+        return;
       }
       
-      setUserInput(prev => prev + key);
-      setCurrentIndex(prev => prev + 1);
-      
-      // Check if test is complete
-      if (currentIndex + 1 >= textToType.length && status === 'running') {
-        endTest();
+      // User has typed something, allow word commit
+      if (userWordInput.length > 0) {
+        // Check if current word has errors
+        const hasError = userWordInput !== currentWord;
+        if (hasError) {
+          setWordErrors(prev => ({ ...prev, [currentWordIndex]: true }));
+        }
+        
+        // Add current word to completed words
+        setCompletedWords(prev => [...prev, userWordInput]);
+        
+        // Move to next word
+        setCurrentWordIndex(prev => prev + 1);
+        setUserWordInput("");
+        
+        // Check if test is complete (no more words)
+        if (currentWordIndex + 1 >= words.length) {
+          endTest();
+        }
       }
+      return;
     }
     
-    // Handle backspace
-    else if (key === 'Backspace') {
-      if (currentIndex > 0) {
-        setCurrentIndex(prev => prev - 1);
-        setUserInput(prev => prev.slice(0, -1));
+    // Handle BACKSPACE
+    if (key === 'Backspace') {
+      if (userWordInput.length > 0) {
+        // Remove last character from current word
+        setUserWordInput(prev => prev.slice(0, -1));
+      } else if (currentWordIndex > 0) {
+        // Move back to previous word if at start of current word
+        setCurrentWordIndex(prev => prev - 1);
+        const previousWord = completedWords[completedWords.length - 1];
+        setUserWordInput(previousWord || "");
+        setCompletedWords(prev => prev.slice(0, -1));
+        // Remove error flag for previous word (allow correction)
+        setWordErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors[currentWordIndex - 1];
+          return newErrors;
+        });
       }
+      return;
     }
-  }, [status, textToType, currentIndex, endTest]);
+
+    // Handle regular character input
+    if (key.length === 1 && !event.ctrlKey && !event.altKey && !event.metaKey) {
+      // Allow typing beyond word length (errors contained per word)
+      setUserWordInput(prev => prev + key);
+    }
+  }, [status, words, currentWordIndex, userWordInput, completedWords, endTest]);
 
   // Pause/Resume toggle
   const togglePause = useCallback(() => {
@@ -1110,55 +1232,147 @@ export default function TestPage(): JSX.Element | null {
     );
   }
 
-  // Calculate stats
-  const wpm = status === 'running' && timeLeft < selectedTime
-    ? Math.round((userInput.length / 5) / ((selectedTime - timeLeft) / 60))
+  // Calculate live stats from word-based state
+  const currentUserInput = completedWords.join(' ') + (userWordInput ? ' ' + userWordInput : '');
+  const currentErrors = Object.keys(wordErrors).length;
+  
+  // MonkeyType Formula: Gross WPM = (all characters typed / 5) / time_in_minutes
+  // Includes ALL characters typed (correct + incorrect + spaces)
+  const timePassed = (selectedTime - timeLeft) / 60; // Convert to minutes
+  
+  const wpm = status === 'running' && timeLeft < selectedTime && timePassed > 0
+    ? Math.round((currentUserInput.length / 5) / timePassed)
     : 0;
   
-  const accuracy = userInput.length > 0
-    ? Math.round(((userInput.length - errors) / userInput.length) * 100)
+  // Real-time accuracy: (correct characters / total characters typed) * 100
+  const correctChars = calculateCorrectCharacters(completedWords, words);
+  const totalCharsTyped = currentUserInput.length;
+  
+  const accuracy = totalCharsTyped > 0
+    ? Math.round((correctChars / totalCharsTyped) * 100)
     : 100;
 
-  // Render text with character highlighting
+  // Render text with word-based highlighting
   const renderText = () => {
     // One-time diagnostic to track what's being rendered (prevent infinite loops)
-    if (textToType.length > 0) {
-      const textSignature = textToType.substring(0, 20);
+    if (words.length > 0) {
+      const textSignature = words.slice(0, 3).join(' ');
       if ((window as any).zenTypeLastRenderLog !== textSignature) {
-        console.log('🎨 RENDERING TEXT - What user sees:', {
-          textLength: textToType.length,
-          textPreview: `"${textToType.substring(0, 50)}..."`,
-          isDummyText: textToType.includes('The quick brown fox'),
-          isAiContent: !textToType.includes('The quick brown fox') && textToType.length > 100,
-          currentTab: activeTab,
-          hasAiTest: !!aiTest,
-          aiTestId: aiTest?.id,
+        console.log('🎨 RENDERING TEXT - Word-based display:', {
+          totalWords: words.length,
+          currentWordIndex,
+          completedWords: completedWords.length,
+          currentWord: words[currentWordIndex] || 'N/A',
+          userInput: userWordInput,
           timestamp: new Date().toISOString()
         });
         (window as any).zenTypeLastRenderLog = textSignature;
       }
     }
     
-    return textToType.split('').map((char, index) => {
-      let className = "transition-colors duration-150";
+    return words.map((word, wordIndex) => {
+      // Determine word state
+      const isCompleted = wordIndex < currentWordIndex;
+      const isCurrent = wordIndex === currentWordIndex;
+      const isFuture = wordIndex > currentWordIndex;
       
-      if (index < currentIndex) {
-        // Already typed characters
-        const typedChar = userInput[index];
-        className += typedChar === char ? " text-green-500" : " text-red-500";
-      } else if (index === currentIndex && status === 'running') {
-        // Current character with cursor
-        className += " text-foreground bg-[#00BFFF]/20 border-b-2 border-[#00BFFF]";
+      // Remove transition-all for instant updates (smooth, butter-like feel)
+      // Only keep spacing classes - no visual delay on word changes
+      let wordClassName = "inline-block mr-2";
+      
+      if (isCompleted) {
+        // Completed word - ALWAYS show original text with color feedback (MonkeyType behavior)
+        const hasError = wordErrors[wordIndex];
+        const targetWord = word; // Original word from test
+        const typedWord = completedWords[wordIndex] || ""; // What user actually typed
+        
+        // If no error, render entire original word as green (optimization)
+        if (!hasError) {
+          return (
+            <span key={wordIndex} className="inline-block mr-2 text-green-500">
+              {targetWord}
+            </span>
+          );
+        }
+        
+        // If error exists, render ORIGINAL word character-by-character with color feedback
+        // CRITICAL: Always show 'char' (original), not 'typedChar' (user's mistake)
+        return (
+          <span key={wordIndex} className="inline-block mr-2">
+            {targetWord.split('').map((char, charIndex) => {
+              const typedChar = typedWord[charIndex];
+              const isCorrect = typedChar === char;
+              
+              return (
+                <span 
+                  key={charIndex} 
+                  className={isCorrect ? "text-green-500" : "text-red-500 bg-red-500/10"}
+                >
+                  {char}
+                </span>
+              );
+            })}
+            {/* Show extra characters typed beyond word length */}
+            {typedWord.length > targetWord.length && (
+              <span className="text-red-500 bg-red-500/20">
+                {typedWord.slice(targetWord.length)}
+              </span>
+            )}
+          </span>
+        );
+      } else if (isCurrent && status === 'running') {
+        // Current word being typed
+        const targetWord = word;
+        const typedWord = userWordInput;
+        
+        return (
+          <span key={wordIndex} className="inline-block mr-2">
+            {targetWord.split('').map((char, charIndex) => {
+              const typedChar = typedWord[charIndex];
+              let charClassName = "transition-colors duration-150";
+              
+              if (charIndex < typedWord.length) {
+                // Character has been typed
+                charClassName += typedChar === char ? " text-green-500" : " text-red-500 bg-red-500/10";
+              } else if (charIndex === typedWord.length) {
+                // Current cursor position
+                charClassName += " text-foreground bg-[#00BFFF]/20 border-b-2 border-[#00BFFF]";
+              } else {
+                // Not yet typed
+                charClassName += " text-muted-foreground";
+              }
+              
+              return (
+                <span key={charIndex} className={charClassName}>
+                  {char}
+                </span>
+              );
+            })}
+            {/* Show extra characters typed beyond word length */}
+            {typedWord.length > targetWord.length && (
+              <span className="text-red-500 bg-red-500/20">
+                {typedWord.slice(targetWord.length)}
+              </span>
+            )}
+          </span>
+        );
+      } else if (isCurrent && status === 'waiting') {
+        // Current word in waiting state (before test starts)
+        wordClassName += " text-foreground";
+        return (
+          <span key={wordIndex} className={wordClassName}>
+            {word}
+          </span>
+        );
       } else {
-        // Future characters
-        className += " text-muted-foreground";
+        // Future word
+        wordClassName += " text-muted-foreground";
+        return (
+          <span key={wordIndex} className={wordClassName}>
+            {word}
+          </span>
+        );
       }
-      
-      return (
-        <span key={index} className={className}>
-          {char}
-        </span>
-      );
     });
   };
 
@@ -1594,7 +1808,7 @@ export default function TestPage(): JSX.Element | null {
             </div>
 
             <div
-              className={`p-8 cursor-text bg-gradient-to-br ${currentTheme.gradient} glass-card rounded-lg border border-border/50 backdrop-blur-sm`}
+              className={`p-8 cursor-text bg-gradient-to-br ${currentTheme.gradient} glass-card rounded-lg backdrop-blur-sm`}
               onClick={() => inputRef.current?.focus()}
             >
               <div
@@ -1617,7 +1831,7 @@ export default function TestPage(): JSX.Element | null {
               <div className="h-1 bg-border rounded-full mb-4">
                 <div
                   className="h-full bg-primary rounded-full transition-all duration-300"
-                  style={{ width: `${(currentIndex / textToType.length) * 100}%` }}
+                  style={{ width: `${words.length > 0 ? (currentWordIndex / words.length) * 100 : 0}%` }}
                 ></div>
               </div>
 
