@@ -1,0 +1,70 @@
+# Firebase Ignore - Exclude from App Hosting deployment
+# These files/folders won't be uploaded to production
+
+# Documentation (Internal use only - not needed in production)
+docs/
+*.md
+!README.md
+
+# Development files
+.git/
+.github/
+.vscode/
+.idea/
+
+# Dependencies
+node_modules/
+functions/node_modules/
+
+# Build artifacts
+.next/
+out/
+build/
+
+# Environment files
+.env*
+env.local
+*.env
+
+# Logs
+log/
+logs/
+*.log
+*.jsonl
+zentype-debug-*.json
+
+# Firebase local files
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# Test files
+**/__tests__/
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+
+# Development scripts
+scripts/
+generate-premade-tests.js
+recreate-firestore-collections.js
+test-correlation-id.js
+
+# Service account keys (should already be in .gitignore)
+**/service-account-key.json
+**/firebase-adminsdk-*.json
+**/*-firebase-adminsdk-*.json
+solotype-23c1f-firebase-adminsdk-fbsvc-c02945eb94.json
+
+# Editor files
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Package manager files
+pnpm-lock.yaml
+yarn.lock
+package-lock.json
