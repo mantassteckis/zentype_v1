@@ -1,7 +1,25 @@
 # ZenType Documentation Index - AI Knowledge Base
 
 **Last Updated:** October 3, 2025  
-**Purpose:** Central index for all project documentation - use this as entry point for AI assistance
+**Purpose:** Central index for all project documentation - use this as entry point for AI assistance  
+**Production URL:** https://zentype-v0--solotype-23c1f.europe-west4.hosted.app/
+
+---
+
+## 📑 **Table of Contents - Quick Jump**
+
+- [Instructions for AI](#instructions-for-ai-assistants)
+- [Quick Navigation](#quick-navigation)
+- [1. Architecture & Design](#1-architecture--design)
+- [2. Typing System Implementation](#2-typing-system-implementation)
+- [3. Feature Implementations](#3-feature-implementations)
+- [4. Debugging & Logging](#4-debugging--logging)
+- [5. Deployment & Operations](#5-deployment--operations)
+- [6. Bug Fixes & Issues](#6-bug-fixes--issues)
+- [7. Planning & Specifications](#7-planning--specifications)
+- [8. Agent Logs](#8-agent-logs)
+- [Recent Changes Log](#recent-changes-log)
+- [Key Project Facts](#key-project-facts-for-ai)
 
 ---
 
@@ -260,7 +278,20 @@ When working on this project:
 
 ## 🔄 **Recent Changes Log**
 
-### October 3, 2025
+### October 3, 2025 (Latest)
+- ✅ **Rate Limiting Disabled** - Temporarily removed rate limits for testing phase
+  - Unlimited AI test generations for all users
+  - Unlimited test result submissions
+  - Preparing for subscription-based limits (Free vs Pro tiers)
+- ✅ **Promotional Fallback Message** - Updated AI fallback content
+  - Black Friday special: 73% OFF ($3/month)
+  - Engaging promotional copy instead of technical error messages
+- ✅ **Updated DEBUG_GUIDE.md** - Documented rate limiting changes
+- ✅ **Added Production URL** - https://zentype-v0--solotype-23c1f.europe-west4.hosted.app/
+- ✅ **Created .firebaseignore** - Excludes docs/ from App Hosting deployment
+- ✅ **Added Table of Contents** - Quick navigation for AI assistants
+
+### October 3, 2025 (Earlier)
 - ✅ Fixed WPM calculation to use MonkeyType's Gross WPM formula
 - ✅ Implemented real-time character-level accuracy calculation
 - ✅ Created MAIN.md as central AI knowledge base
@@ -318,7 +349,7 @@ zentype_v1/
 ├── components/       # React components
 ├── hooks/           # Custom React hooks
 ├── lib/             # Utility libraries
-├── docs/            # Documentation (THIS FILE)
+├── docs/            # Documentation (THIS FILE/ IKB For AI agent)
 └── functions/       # Firebase Cloud Functions
 ```
 
