@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { performanceLogger } from '@/lib/performance-logger';
 import { withPerformanceMonitoring } from '@/src/lib/performance-middleware';
+import { requireAdmin, AdminUser } from '@/lib/admin-auth';
 
-async function handleGET(request: NextRequest) {
+async function handleGET(request: NextRequest, adminUser: AdminUser) {
   console.log("Admin logs search API v1 called");
   
   try {
@@ -57,7 +58,7 @@ async function handleGET(request: NextRequest) {
   }
 }
 
-async function handlePOST(request: NextRequest) {
+async function handlePOST(request: NextRequest, adminUser: AdminUser) {
   console.log("Minimal POST handler for /api/v1/admin/logs/search was reached!");
   return new NextResponse(
     JSON.stringify({ message: "POST Success from minimal route handler" }),
@@ -65,13 +66,17 @@ async function handlePOST(request: NextRequest) {
   );
 }
 
-// Export wrapped handlers
-export const GET = withPerformanceMonitoring(handleGET, {
-  enablePayloadTracking: false,
-  slowRequestThreshold: 500
-});
+// Export wrapped handlers with admin authentication
+export const GET = requireAdmin(
+  withPerformanceMonitoring(handleGET, {
+    enablePayloadTracking: false,
+    slowRequestThreshold: 500
+  })
+);
 
-export const POST = withPerformanceMonitoring(handlePOST, {
-  enablePayloadTracking: true,
-  slowRequestThreshold: 1000
-});
+export const POST = requireAdmin(
+  withPerformanceMonitoring(handlePOST, {
+    enablePayloadTracking: true,
+    slowRequestThreshold: 1000
+  })
+);

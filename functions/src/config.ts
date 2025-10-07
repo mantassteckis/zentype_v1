@@ -22,13 +22,11 @@ if (fs.existsSync(envPath)) {
 
 // Export environment variables
 // For Firebase Functions v2, try multiple sources for the API key
-export const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 
-  process.env.GOOGLE_GENAI_API_KEY || 
-  'AIzaSyByZXSsupU9EwPk2fZ3Esc9-gHjZwPBxBU';
+export const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY;
 
 // Validate required environment variables
 if (!GEMINI_API_KEY) {
-  console.warn('GEMINI_API_KEY is not defined in environment variables');
+  throw new Error('GEMINI_API_KEY is required but not defined in environment variables. Please set GEMINI_API_KEY or GOOGLE_GENAI_API_KEY.');
 } else {
   console.log('GEMINI_API_KEY loaded successfully');
 }

@@ -1,19 +1,129 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow authenticated users to read and write their own data
+
+    // ========================================
+    // HELPER FUNCTIONS
+    // ========================================
+
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Check if user owns the document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Check if user is admin (via custom claims)
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.admin == true;
+    }
+
+    // ========================================
+    // PROFILES COLLECTION
+    // ========================================
     match /profiles/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Users can read their own profile
+      allow read: if isOwner(userId);
+
+      // Users can create/update their own profile
+      allow create, update: if isOwner(userId);
+
+      // Only user can delete their own profile
+      allow delete: if isOwner(userId);
     }
-    
-    // Allow authenticated users to write test results
-    match /testResults/{document=**} {
-      allow read, write: if request.auth != null;
+
+    // ========================================
+    // TEST RESULTS COLLECTION
+    // ========================================
+    match /testResults/{resultId} {
+      // Users can only write their own test results
+      allow create: if isAuthenticated()
+                    && request.resource.data.userId == request.auth.uid;
+
+      // Users can read their own results
+      allow read: if isAuthenticated()
+                  && resource.data.userId == request.auth.uid;
+
+      // Users can update their own results (for corrections)
+      allow update: if isOwner(resource.data.userId);
+
+      // Only owner can delete
+      allow delete: if isOwner(resource.data.userId);
     }
-    
-    // Allow server-side writes (for API routes)
-    match /{document=**} {
-      allow read, write: if true; // Temporarily allow all writes for testing
+
+    // ========================================
+    // TEST CONTENTS COLLECTION (Pre-made tests)
+    // ========================================
+    match /test_contents/{testId} {
+      // Anyone authenticated can read tests
+      allow read: if isAuthenticated();
+
+      // Only admins can create/update/delete tests
+      allow write: if isAdmin();
     }
+
+    // ========================================
+    // AI GENERATED TESTS COLLECTION
+    // ========================================
+    match /aiGeneratedTests/{testId} {
+      // Users can read their own AI tests or public tests
+      allow read: if isAuthenticated()
+                  && (resource.data.userId == request.auth.uid
+                      || resource.data.isPublic == true);
+
+      // Users can create their own AI tests
+      allow create: if isAuthenticated()
+                    && request.resource.data.userId == request.auth.uid;
+
+      // Users can update/delete their own AI tests
+      allow update, delete: if isOwner(resource.data.userId);
+    }
+
+    // ========================================
+    // LEADERBOARD COLLECTIONS
+    // ========================================
+    match /leaderboard_all_time/{userId} {
+      // Anyone can read all-time leaderboard
+      allow read: if isAuthenticated();
+
+      // No direct writes - only via Admin SDK in API routes
+      allow write: if false;
+    }
+
+    match /leaderboard_weekly/{docId} {
+      // Anyone can read weekly leaderboard
+      allow read: if isAuthenticated();
+
+      // No direct writes - only via Admin SDK
+      allow write: if false;
+    }
+
+    match /leaderboard_monthly/{docId} {
+      // Anyone can read monthly leaderboard
+      allow read: if isAuthenticated();
+
+      // No direct writes - only via Admin SDK
+      allow write: if false;
+    }
+
+    // ========================================
+    // ADMIN COLLECTIONS (Performance logs, etc.)
+    // ========================================
+    match /performance_logs/{logId} {
+      // Only admins can read logs
+      allow read: if isAdmin();
+
+      // No direct writes - only via Admin SDK
+      allow write: if false;
+    }
+
+    // ========================================
+    // DENY ALL OTHER COLLECTIONS BY DEFAULT
+    // ========================================
+    // Any collection not explicitly defined above is DENIED
+    // This replaces the dangerous "allow read, write: if true"
   }
 }

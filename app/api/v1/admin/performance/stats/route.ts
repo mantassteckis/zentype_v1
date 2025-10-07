@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { performanceLogger } from '@/lib/performance-logger';
 import { withPerformanceMonitoring } from '@/src/lib/performance-middleware';
+import { requireAdmin, AdminUser } from '@/lib/admin-auth';
 
-async function handleGET(request: NextRequest) {
+async function handleGET(request: NextRequest, adminUser: AdminUser) {
   console.log("Admin performance stats API v1 called");
   
   try {
@@ -59,8 +60,10 @@ async function handleGET(request: NextRequest) {
   }
 }
 
-// Export wrapped handler
-export const GET = withPerformanceMonitoring(handleGET, {
-  enablePayloadTracking: false,
-  slowRequestThreshold: 500
-});
+// Export wrapped handler with admin authentication
+export const GET = requireAdmin(
+  withPerformanceMonitoring(handleGET, {
+    enablePayloadTracking: false,
+    slowRequestThreshold: 500
+  })
+);

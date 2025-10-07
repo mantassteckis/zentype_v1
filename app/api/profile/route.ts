@@ -1,25 +1,62 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase-admin';
+import { db, auth as adminAuth } from '@/lib/firebase-admin';
+import { CORRELATION_ID_HEADER } from '@/lib/correlation-id';
 
 /**
  * Creates a user profile document in Firestore from the request JSON.
+ * Requires authentication - users can only create their own profile.
  *
- * @param request - NextRequest whose JSON body must include `uid` and `email`. Optional fields: `username`, `bio`, `preferredThemeId`, `preferredFontId`, `settings` (with `keyboardSounds`, `visualFeedback`, `autoSaveAiTests`), `stats` (with `rank`, `avgAcc`, `avgWpm`, `testsCompleted`), `bestWpm`, `testsCompleted`, `averageAccuracy`, and `createdAt`.
+ * @param request - NextRequest with Authorization header and JSON body including `uid` and `email`. Optional fields: `username`, `bio`, `preferredThemeId`, `preferredFontId`, `settings` (with `keyboardSounds`, `visualFeedback`, `autoSaveAiTests`), `stats` (with `rank`, `avgAcc`, `avgWpm`, `testsCompleted`), `bestWpm`, `testsCompleted`, `averageAccuracy`, and `createdAt`.
  * @returns A JSON NextResponse with one of:
  * - `{ success: true, message: 'Profile created successfully', profile: { ... } }` when creation succeeds.
+ * - `{ error: 'Unauthorized' }` with status 401 when no valid token is provided.
+ * - `{ error: 'Forbidden - Can only create your own profile' }` with status 403 when trying to create another user's profile.
  * - `{ error: 'Missing required fields: uid and email' }` with status 400 when `uid` or `email` is missing.
  * - `{ error: 'Profile already exists for this user' }` with status 409 when a profile for `uid` already exists.
  * - `{ error: 'Internal server error' }` with status 500 on unexpected errors.
  */
 export async function POST(request: NextRequest) {
   try {
+    // Verify authentication
+    const authHeader = request.headers.get('authorization');
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      const correlationId = request.headers.get(CORRELATION_ID_HEADER) || 'unknown';
+      return NextResponse.json(
+        { error: 'Unauthorized - No valid token provided', correlationId },
+        { status: 401 }
+      );
+    }
+
+    const idToken = authHeader.split('Bearer ')[1];
+    let authenticatedUserId: string;
+
+    try {
+      const decodedToken = await adminAuth.verifyIdToken(idToken);
+      authenticatedUserId = decodedToken.uid;
+    } catch (error) {
+      const correlationId = request.headers.get(CORRELATION_ID_HEADER) || 'unknown';
+      return NextResponse.json(
+        { error: 'Unauthorized - Invalid token', correlationId },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
-    
+
     // Validate required fields
     if (!body.uid || !body.email) {
       return NextResponse.json(
         { error: 'Missing required fields: uid and email' },
         { status: 400 }
+      );
+    }
+
+    // Ensure user can only create their own profile
+    if (body.uid !== authenticatedUserId) {
+      return NextResponse.json(
+        { error: 'Forbidden - Can only create your own profile' },
+        { status: 403 }
       );
     }
 
