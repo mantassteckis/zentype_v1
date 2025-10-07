@@ -1,6 +1,6 @@
 # ZenType Documentation Index - AI Knowledge Base
 
-**Last Updated:** October 7, 2025  
+**Last Updated:** October 7, 2025 (Theme & Font System v2.0)  
 **Purpose:** Central index for all project documentation - use this as entry point for AI assistance  
 **Production URL:** https://zentype-v0--solotype-23c1f.europe-west4.hosted.app/
 
@@ -148,6 +148,13 @@ When working on this project:
 
 ### **3. Feature Implementations**
 
+#### `THEME_FONT_SYSTEM.md` **NEW**
+**Path:** `docs/THEME_FONT_SYSTEM.md`  
+**Purpose:** Complete theme and font customization system  
+**Contents:** 10 typing themes (standard, vibrant, light, complex), 10 fonts (5 monospaced + 5 decorative), real-time switching, smart text color adaptation  
+**Status:** ✅ COMPLETED - Production Ready  
+**Updated:** October 7, 2025
+
 #### `ZENTYPE_AUTO_SAVE_SUCCESS_SUMMARY.md`
 **Path:** `docs/ZENTYPE_AUTO_SAVE_SUCCESS_SUMMARY.md`  
 **Purpose:** Auto-save AI tests feature documentation  
@@ -155,7 +162,7 @@ When working on this project:
 **Status:** ✅ COMPLETED  
 **Updated:** October 3, 2025
 
-#### `MODAL_SYSTEM_IMPLEMENTATION.md` **NEW**
+#### `MODAL_SYSTEM_IMPLEMENTATION.md`
 **Path:** `docs/MODAL_SYSTEM_IMPLEMENTATION.md`  
 **Purpose:** Modal system for AI failures and promotional campaigns  
 **Contents:** ZenTypeModal component, error handling flow, promotional modals, practice test redirect  
@@ -320,16 +327,41 @@ When working on this project:
   - Preserved all infrastructure for easy re-enablement with subscription tiers
   - All TypeScript compilation errors resolved
 
-### October 3, 2025 (Modal System)
-- ✅ **Created Modal System** - Professional modal popups for AI failures and promotions (NordVPN-style)
-  - New component: `components/ui/zentype-modal.tsx` (180+ lines)
-  - Blurred backdrop, polymorphic gradient borders, theme-aware
-  - Two modal types: promotional (AI failure) and error (general errors)
-  - Updated Cloud Functions to throw HttpsError instead of fallback text
-  - Integrated modal into test page with proper error handling
-  - Added debug logging for all modal interactions
-  - Documentation: `MODAL_SYSTEM_IMPLEMENTATION.md`
-- ✅ **Deployed to Production** - All changes live on Firebase Cloud Functions
+## 📅 **Recent Changes Log**
+
+### October 7, 2025 (Theme & Font System v2.0)
+- ✅ **Implemented 10 Typing Themes** - Standard (default), Midnight Blue, Forest Mist, Neon Dreams, Sunset Blaze, Ocean Aurora, Light Sky, Soft Lavender, Cosmic Void, Matrix Code
+- ✅ **Implemented 10 Typing Fonts** - 5 monospaced (Fira Code, JetBrains Mono, Source Code Pro, Roboto Mono, Ubuntu Mono) + 5 decorative (Playfair Display, Lobster, Pacifico, Bebas Neue, Righteous)
+- ✅ **Added Smart Text Color System** - Dynamic color adaptation based on theme brightness and current light/dark mode
+- ✅ **Real-Time Theme/Font Switching** - Changes apply immediately during active typing tests
+- ✅ **Cross-Mode Compatibility** - All themes work in both light and dark modes with automatic text color adjustment
+- ✅ **Enhanced Settings UI** - Grouped fonts by type (monospaced/decorative), improved theme previews with sample text
+- ✅ **Created THEME_FONT_SYSTEM.md** - Comprehensive documentation for new theme and font system
+- ✅ **Updated Default Values** - Changed default theme from "default" to "standard", kept Fira Code as default font
+
+### October 7, 2025 (Earlier - Light Mode UI Fix)
+- ✅ Resolved light mode rendering issue in login/signup forms
+- ✅ Replaced hardcoded colors (text-white, bg-white/5) with theme-aware CSS variables
+- ✅ Updated 62 instances across login.tsx and signup.tsx
+- ✅ Now uses text-foreground, text-muted-foreground, bg-background/50, border-border for proper theme switching
+
+### October 7, 2025 (Earlier - Rate Limiting & File Fix)
+- ✅ Fixed file corruption in functions/src/index.ts (removed invalid characters from line 1)
+- ✅ Disabled rate limiting for beta testing period
+- ✅ Created RATE_LIMITING_FUTURE_IMPLEMENTATION.md guide for re-implementation with subscription tiers
+- ✅ Documented rate limiting locations and future implementation phases
+
+### October 3, 2025 (Latest - Modal System)
+- ✅ **Implemented ZenTypeModal System** - Reusable modal component for AI failures and promotional messages
+- ✅ **Created MODAL_SYSTEM_IMPLEMENTATION.md** - Complete documentation of modal architecture
+- ✅ **Added Practice Test Redirect** - Seamless fallback when AI generation fails
+- ✅ **Integrated Error Handling** - Professional error messages with actionable CTAs
+- ✅ **Deployed to Production** - Modal system live at https://zentype-v0--solotype-23c1f.europe-west4.hosted.app/
+
+### October 3, 2025 (Production Deployment)
+- ✅ **Added Production URL** - https://zentype-v0--solotype-23c1f.europe-west4.hosted.app/
+- ✅ **Created .firebaseignore** - Excludes docs/ from App Hosting deployment
+- ✅ **Added Table of Contents** - Quick navigation for AI assistants
 
 ### October 3, 2025 (Earlier - Rate Limiting & Deployment)
 - ✅ **Rate Limiting Disabled** - Temporarily removed rate limits for testing phase

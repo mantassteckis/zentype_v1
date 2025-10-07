@@ -28,7 +28,8 @@ export default function TestPage(): JSX.Element | null {
   const { 
     preferences, 
     currentTheme, 
-    currentFont, 
+    currentFont,
+    dynamicTextColor, // New: Smart text color that adapts to theme and mode
     availableThemes, 
     availableFonts,
     setTheme,
@@ -104,6 +105,19 @@ export default function TestPage(): JSX.Element | null {
 
   // Client-side mount state to prevent hydration issues
   const [isMounted, setIsMounted] = useState(false);
+  
+  // Debug: Log theme changes
+  useEffect(() => {
+    if (isMounted && currentTheme) {
+      console.log('🎨 Theme state updated:', {
+        id: currentTheme.id,
+        name: currentTheme.name,
+        gradient: currentTheme.gradient,
+        preferenceValue: preferences.theme,
+        fullGradientClass: `bg-gradient-to-br ${currentTheme.gradient}`
+      });
+    }
+  }, [currentTheme, preferences.theme, isMounted]);
 
   // Helper function to calculate correct characters (for accurate WPM)
   // Compares user's typed text against original word character-by-character
@@ -1894,19 +1908,22 @@ export default function TestPage(): JSX.Element | null {
                 <Palette className="h-4 w-4 text-muted-foreground" />
                 <Select
                   value={preferences.theme}
-                  onValueChange={setTheme}
+                  onValueChange={(value) => {
+                    console.log('🎨 Theme changed to:', value);
+                    setTheme(value);
+                  }}
                 >
-                  <SelectTrigger className="w-32 h-8 text-xs glass-card border-border bg-background/50">
+                  <SelectTrigger className="w-48 h-9 text-sm glass-card border-border bg-background/50">
                     <SelectValue placeholder="Theme" />
                   </SelectTrigger>
-                  <SelectContent className="glass-card border-border">
+                  <SelectContent className="glass-card border-border max-h-[300px]">
                     {availableThemes.map((theme) => (
-                      <SelectItem key={theme.id} value={theme.id} className="text-xs">
+                      <SelectItem key={theme.id} value={theme.id} className="text-sm py-2">
                         <div className="flex items-center space-x-2">
                           <div 
-                            className={`w-3 h-3 rounded-full bg-gradient-to-r ${theme.gradient} border border-border/50`}
+                            className={`w-4 h-4 rounded-full bg-gradient-to-br ${theme.gradient} border border-border/50 flex-shrink-0`}
                           />
-                          <span>{theme.name}</span>
+                          <span className="whitespace-nowrap">{theme.name}</span>
                         </div>
                       </SelectItem>
                     ))}
@@ -1918,15 +1935,18 @@ export default function TestPage(): JSX.Element | null {
                 <Type className="h-4 w-4 text-muted-foreground" />
                 <Select
                   value={preferences.font}
-                  onValueChange={setFont}
+                  onValueChange={(value) => {
+                    console.log('🔤 Font changed to:', value);
+                    setFont(value);
+                  }}
                 >
-                  <SelectTrigger className="w-32 h-8 text-xs glass-card border-border bg-background/50">
+                  <SelectTrigger className="w-48 h-9 text-sm glass-card border-border bg-background/50">
                     <SelectValue placeholder="Font" />
                   </SelectTrigger>
-                  <SelectContent className="glass-card border-border">
+                  <SelectContent className="glass-card border-border max-h-[300px]">
                     {availableFonts.map((font) => (
-                      <SelectItem key={font.id} value={font.id} className={`text-xs ${font.className}`}>
-                        {font.name}
+                      <SelectItem key={font.id} value={font.id} className={`text-sm py-2 ${font.className}`}>
+                        <span className="whitespace-nowrap">{font.name}</span>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1935,11 +1955,18 @@ export default function TestPage(): JSX.Element | null {
             </div>
 
             <div
-              className={`p-8 cursor-text bg-gradient-to-br ${currentTheme.gradient} glass-card rounded-lg backdrop-blur-sm`}
-              onClick={() => inputRef.current?.focus()}
+              className={`p-8 cursor-text bg-gradient-to-br ${currentTheme.gradient} rounded-lg border border-border shadow-lg transition-all duration-300`}
+              onClick={() => {
+                console.log('📦 Current theme applied:', {
+                  id: currentTheme.id,
+                  name: currentTheme.name,
+                  gradient: currentTheme.gradient
+                });
+                inputRef.current?.focus();
+              }}
             >
               <div
-                className={`text-xl leading-relaxed mb-6 select-none ${currentFont.className} ${currentTheme.textColor} word-wrap break-word overflow-wrap break-word`}
+                className={`text-xl leading-relaxed mb-6 select-none ${currentFont.className} ${dynamicTextColor} word-wrap break-word overflow-wrap break-word`}
                 style={{ wordWrap: "break-word", overflowWrap: "break-word" }}
               >
                 {renderText()}

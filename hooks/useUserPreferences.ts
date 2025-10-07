@@ -9,13 +9,15 @@ export interface TypingTheme {
   id: string
   name: string
   gradient: string
-  textColor: string
+  textColor: string // This will be calculated dynamically but kept for compatibility
+  isDark: boolean // New: determines if theme works better in dark mode
 }
 
 export interface TypingFont {
   id: string
   name: string
   className: string
+  isMonospace: boolean // New: categorize fonts
 }
 
 export interface UserPreferences {
@@ -28,27 +30,158 @@ export interface UserPreferences {
 
 // Available themes and fonts
 export const TYPING_THEMES: TypingTheme[] = [
-  { id: "default", name: "Default", gradient: "from-background to-background", textColor: "text-foreground" },
-  { id: "neon-wave", name: "Neon Wave", gradient: "from-purple-900/20 to-cyan-900/20", textColor: "text-cyan-300" },
-  { id: "sunset", name: "Sunset", gradient: "from-orange-900/20 to-pink-900/20", textColor: "text-orange-200" },
-  { id: "forest", name: "Forest", gradient: "from-green-900/20 to-emerald-900/20", textColor: "text-green-200" },
-  { id: "ocean", name: "Ocean", gradient: "from-blue-900/20 to-teal-900/20", textColor: "text-blue-200" },
-  { id: "midnight", name: "Midnight", gradient: "from-slate-900/40 to-indigo-900/40", textColor: "text-slate-200" },
+  // Standard - Plain background matching website (default)
+  { 
+    id: "standard", 
+    name: "Standard", 
+    gradient: "from-background to-background", 
+    textColor: "text-foreground",
+    isDark: true // Works in both modes via CSS variables
+  },
+  
+  // Subtle gradients - Professional & clean
+  { 
+    id: "midnight-blue", 
+    name: "Midnight Blue", 
+    gradient: "from-slate-900/60 via-blue-900/40 to-slate-900/60", 
+    textColor: "text-blue-100",
+    isDark: true
+  },
+  { 
+    id: "forest-mist", 
+    name: "Forest Mist", 
+    gradient: "from-emerald-900/50 via-teal-800/30 to-emerald-900/50", 
+    textColor: "text-emerald-100",
+    isDark: true
+  },
+  
+  // Vibrant multi-color gradients - Modern & energetic
+  { 
+    id: "neon-dreams", 
+    name: "Neon Dreams", 
+    gradient: "from-purple-600/40 via-pink-500/40 to-cyan-500/40", 
+    textColor: "text-white",
+    isDark: true
+  },
+  { 
+    id: "sunset-blaze", 
+    name: "Sunset Blaze", 
+    gradient: "from-orange-600/50 via-red-500/40 to-pink-600/50", 
+    textColor: "text-orange-50",
+    isDark: true
+  },
+  { 
+    id: "ocean-aurora", 
+    name: "Ocean Aurora", 
+    gradient: "from-cyan-600/40 via-blue-500/40 to-purple-600/40", 
+    textColor: "text-cyan-50",
+    isDark: true
+  },
+  
+  // Light themes - Works great in light mode
+  { 
+    id: "light-sky", 
+    name: "Light Sky", 
+    gradient: "from-blue-100/80 via-cyan-50/80 to-blue-100/80", 
+    textColor: "text-gray-900",
+    isDark: false
+  },
+  { 
+    id: "soft-lavender", 
+    name: "Soft Lavender", 
+    gradient: "from-purple-100/70 via-pink-50/70 to-purple-100/70", 
+    textColor: "text-gray-900",
+    isDark: false
+  },
+  
+  // Complex shaded themes - Premium feel
+  { 
+    id: "cosmic-void", 
+    name: "Cosmic Void", 
+    gradient: "from-slate-950/80 via-purple-950/60 via-blue-950/60 to-slate-950/80", 
+    textColor: "text-purple-100",
+    isDark: true
+  },
+  { 
+    id: "matrix-code", 
+    name: "Matrix Code", 
+    gradient: "from-black/90 via-green-950/70 to-black/90", 
+    textColor: "text-green-400",
+    isDark: true
+  },
 ]
 
 export const TYPING_FONTS: TypingFont[] = [
-  { id: "fira-code", name: "Fira Code", className: "font-mono" },
-  { id: "jetbrains-mono", name: "JetBrains Mono", className: "font-mono" },
-  { id: "source-code-pro", name: "Source Code Pro", className: "font-mono" },
-  { id: "roboto-mono", name: "Roboto Mono", className: "font-mono" },
-  { id: "ubuntu-mono", name: "Ubuntu Mono", className: "font-mono" },
+  // Monospaced fonts - For serious coding/typing practice
+  { 
+    id: "fira-code", 
+    name: "Fira Code", 
+    className: "font-[family-name:var(--font-fira-code)]",
+    isMonospace: true
+  },
+  { 
+    id: "jetbrains-mono", 
+    name: "JetBrains Mono", 
+    className: "font-[family-name:var(--font-jetbrains-mono)]",
+    isMonospace: true
+  },
+  { 
+    id: "source-code-pro", 
+    name: "Source Code Pro", 
+    className: "font-[family-name:var(--font-source-code-pro)]",
+    isMonospace: true
+  },
+  { 
+    id: "roboto-mono", 
+    name: "Roboto Mono", 
+    className: "font-[family-name:var(--font-roboto-mono)]",
+    isMonospace: true
+  },
+  { 
+    id: "ubuntu-mono", 
+    name: "Ubuntu Mono", 
+    className: "font-[family-name:var(--font-ubuntu-mono)]",
+    isMonospace: true
+  },
+  
+  // Decorative fonts - For fun/stylistic typing
+  { 
+    id: "playfair-display", 
+    name: "Playfair Display", 
+    className: "font-[family-name:var(--font-playfair-display)]",
+    isMonospace: false
+  },
+  { 
+    id: "lobster", 
+    name: "Lobster", 
+    className: "font-[family-name:var(--font-lobster)]",
+    isMonospace: false
+  },
+  { 
+    id: "pacifico", 
+    name: "Pacifico", 
+    className: "font-[family-name:var(--font-pacifico)]",
+    isMonospace: false
+  },
+  { 
+    id: "merriweather", 
+    name: "Merriweather", 
+    className: "font-[family-name:var(--font-merriweather)]",
+    isMonospace: false
+  },
+  { 
+    id: "righteous", 
+    name: "Righteous", 
+    className: "font-[family-name:var(--font-righteous)]",
+    isMonospace: false
+  },
 ]
 
 // External store for user preferences with real-time sync
 class UserPreferencesStore {
   private preferences: UserPreferences = {
-    theme: 'default',
-    font: 'fira-code',
+    theme: 'standard', // Default to standard theme
+    font: 'fira-code', // Default to Fira Code (most popular monospace)
     keyboardSounds: true,
     visualFeedback: true,
     autoSaveAiTests: false
@@ -65,8 +198,8 @@ class UserPreferencesStore {
       const savedAutoSaveAiTests = localStorage.getItem('zentype-auto-save-ai-tests')
       
       this.preferences = {
-        theme: savedTheme || 'default',
-        font: savedFont || 'fira-code',
+        theme: savedTheme || 'standard', // Default to standard
+        font: savedFont || 'fira-code', // Default to Fira Code
         keyboardSounds: savedKeyboardSounds ? JSON.parse(savedKeyboardSounds) : true,
         visualFeedback: savedVisualFeedback ? JSON.parse(savedVisualFeedback) : true,
         autoSaveAiTests: savedAutoSaveAiTests ? JSON.parse(savedAutoSaveAiTests) : false
@@ -81,10 +214,10 @@ class UserPreferencesStore {
     let updated = false
     
     if (event.key === 'zenTypeTheme' || event.key === 'zentype-typing-theme') {
-      this.preferences.theme = event.newValue || 'default'
+      this.preferences.theme = event.newValue || 'standard' // Default to standard
       updated = true
     } else if (event.key === 'zenTypeFont' || event.key === 'zentype-typing-font') {
-      this.preferences.font = event.newValue || 'fira-code'
+      this.preferences.font = event.newValue || 'fira-code' // Default to Fira Code
       updated = true
     } else if (event.key === 'zentype-keyboard-sounds') {
       this.preferences.keyboardSounds = event.newValue ? JSON.parse(event.newValue) : true
@@ -233,7 +366,7 @@ class UserPreferencesStore {
 const userPreferencesStore = new UserPreferencesStore()
 
 // Cached server snapshot to avoid infinite loop
-const SERVER_SNAPSHOT = { theme: 'default', font: 'fira-code', keyboardSounds: true, visualFeedback: true, autoSaveAiTests: false };
+const SERVER_SNAPSHOT = { theme: 'standard', font: 'fira-code', keyboardSounds: true, visualFeedback: true, autoSaveAiTests: false };
 
 /**
  * Enhanced hook to manage all user preferences with real-time synchronization
@@ -260,6 +393,65 @@ export const useUserPreferences = () => {
   // Get current theme and font objects
   const currentTheme = TYPING_THEMES.find(t => t.id === preferences.theme) || TYPING_THEMES[0]
   const currentFont = TYPING_FONTS.find(f => f.id === preferences.font) || TYPING_FONTS[0]
+  
+  // Calculate dynamic text color based on theme and current system/user theme
+  const [dynamicTextColor, setDynamicTextColor] = useState(currentTheme.textColor)
+  
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    
+    // Check if we're in dark mode
+    const isDarkMode = document.documentElement.classList.contains('dark')
+    
+    // For standard theme, always use foreground color
+    if (currentTheme.id === 'standard') {
+      setDynamicTextColor('text-foreground')
+      return
+    }
+    
+    // For light themes in light mode or dark themes in dark mode, use theme's textColor
+    // For mismatches, adjust text color for better visibility
+    if (currentTheme.isDark && !isDarkMode) {
+      // Dark theme in light mode - make text darker for visibility
+      setDynamicTextColor('text-gray-800')
+    } else if (!currentTheme.isDark && isDarkMode) {
+      // Light theme in dark mode - make text lighter for visibility
+      setDynamicTextColor('text-white')
+    } else {
+      // Perfect match - use theme's defined color
+      setDynamicTextColor(currentTheme.textColor)
+    }
+  }, [currentTheme, preferences.theme])
+  
+  // Listen for theme changes (light/dark mode toggle)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'class') {
+          const isDarkMode = document.documentElement.classList.contains('dark')
+          
+          if (currentTheme.id === 'standard') {
+            setDynamicTextColor('text-foreground')
+          } else if (currentTheme.isDark && !isDarkMode) {
+            setDynamicTextColor('text-gray-800')
+          } else if (!currentTheme.isDark && isDarkMode) {
+            setDynamicTextColor('text-white')
+          } else {
+            setDynamicTextColor(currentTheme.textColor)
+          }
+        }
+      })
+    })
+    
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    })
+    
+    return () => observer.disconnect()
+  }, [currentTheme])
 
   // Theme setter with profile sync
   const setTheme = async (theme: string) => {
@@ -351,6 +543,7 @@ export const useUserPreferences = () => {
     preferences,
     currentTheme,
     currentFont,
+    dynamicTextColor, // New: Smart text color based on theme and mode
     
     // Legacy compatibility
     themeId: preferences.theme,

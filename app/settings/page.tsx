@@ -19,7 +19,8 @@ export default function SettingsPage() {
   const { 
     preferences, 
     currentTheme, 
-    currentFont, 
+    currentFont,
+    dynamicTextColor, // New: Smart text color
     availableThemes, 
     availableFonts,
     setTheme,
@@ -178,7 +179,7 @@ export default function SettingsPage() {
               <p className="text-muted-foreground">Choose a visual theme for your typing practice area</p>
               <div className={`p-6 rounded-lg bg-gradient-to-br ${currentTheme.gradient} border border-border`}>
                 <p className="text-sm text-muted-foreground mb-2">Live Preview:</p>
-                <p className={`text-lg ${currentFont.className} ${currentTheme.textColor} leading-relaxed`}>
+                <p className={`text-lg ${currentFont.className} ${dynamicTextColor} leading-relaxed`}>
                   The quick brown fox jumps over the lazy dog. This is how your typing area will look.
                 </p>
               </div>
@@ -194,11 +195,16 @@ export default function SettingsPage() {
                     }`}
                   >
                     <div
-                      className={`h-16 rounded-md bg-gradient-to-br ${theme.gradient} mb-3 flex items-center justify-center`}
+                      className={`h-16 rounded-md bg-gradient-to-br ${theme.gradient} mb-3 flex items-center justify-center px-2`}
                     >
-                      <span className={`text-sm font-mono ${theme.textColor}`}>Sample Text</span>
+                      <span className={`text-xs font-mono ${theme.textColor} text-center`}>
+                        The quick brown fox
+                      </span>
                     </div>
                     <p className="text-sm font-medium text-foreground">{theme.name}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {theme.isDark ? "Dark theme" : "Light theme"}
+                    </p>
                   </button>
                 ))}
               </div>
@@ -213,13 +219,24 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-4">
-              <p className="text-muted-foreground">Select your preferred monospaced font for typing practice</p>
+              <p className="text-muted-foreground">Select your preferred font for typing practice</p>
               <Select value={preferences.font} onValueChange={setFont}>
                 <SelectTrigger className="w-full glass-card border-border bg-background/50">
                   <SelectValue placeholder="Choose a font" />
                 </SelectTrigger>
                 <SelectContent className="glass-card border-border">
-                  {availableFonts.map((font) => (
+                  <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                    ⌨️ Monospaced Fonts (Coding)
+                  </div>
+                  {availableFonts.filter(f => f.isMonospace).map((font) => (
+                    <SelectItem key={font.id} value={font.id} className={font.className}>
+                      {font.name}
+                    </SelectItem>
+                  ))}
+                  <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground mt-2">
+                    🎨 Decorative Fonts (Stylistic)
+                  </div>
+                  {availableFonts.filter(f => !f.isMonospace).map((font) => (
                     <SelectItem key={font.id} value={font.id} className={font.className}>
                       {font.name}
                     </SelectItem>
@@ -229,11 +246,14 @@ export default function SettingsPage() {
 
               <div className={`p-6 glass-card border-border rounded-lg bg-gradient-to-br ${currentTheme.gradient}`}>
                 <p className="text-sm text-muted-foreground mb-2">Font Preview:</p>
-                <p className={`text-lg ${currentFont.className} ${currentTheme.textColor} leading-relaxed`}>
+                <p className={`text-lg ${currentFont.className} ${dynamicTextColor} leading-relaxed mb-2`}>
                   The quick brown fox jumps over the lazy dog. 1234567890
                   <br />
                   <span className="text-green-500">Correct characters</span>{" "}
                   <span className="text-red-500">Incorrect characters</span>
+                </p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {currentFont.isMonospace ? "⌨️ Monospaced (Coding)" : "🎨 Decorative (Stylistic)"}
                 </p>
               </div>
             </div>
