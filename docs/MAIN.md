@@ -1,6 +1,6 @@
 # ZenType Documentation Index - AI Knowledge Base
 
-**Last Updated:** October 3, 2025  
+**Last Updated:** October 7, 2025  
 **Purpose:** Central index for all project documentation - use this as entry point for AI assistance  
 **Production URL:** https://zentype-v0--solotype-23c1f.europe-west4.hosted.app/
 
@@ -302,7 +302,25 @@ When working on this project:
 
 ## 🔄 **Recent Changes Log**
 
-### October 3, 2025 (Latest - Modal System)
+### October 7, 2025 (Latest - UI Theme Fix)
+- ✅ **Fixed Light Mode UI Bug** - Login/Signup forms now properly themed
+  - Replaced hardcoded color classes (`text-white`, `text-gray-*`) with theme-aware CSS variables
+  - Updated login page: `text-foreground`, `text-muted-foreground`, `bg-background/50`, `border-border`
+  - Updated signup page: Same theme-aware classes for consistency
+  - Forms now render correctly in both dark and light modes
+  - Improved readability and visual consistency across all themes
+  - Files updated: `app/login/page.tsx`, `app/signup/page.tsx`
+
+### October 7, 2025 (Earlier - Rate Limiting Removal & File Fix)
+- ✅ **Fixed File Corruption** - Removed invalid character sequence from `functions/src/index.ts`
+- ✅ **Disabled Rate Limiting** - Temporarily removed for beta testing
+  - Updated `generateAiTest` and `submitTestResult` functions
+  - Added clear documentation references to future implementation guide
+  - Created `RATE_LIMITING_FUTURE_IMPLEMENTATION.md` with complete roadmap
+  - Preserved all infrastructure for easy re-enablement with subscription tiers
+  - All TypeScript compilation errors resolved
+
+### October 3, 2025 (Modal System)
 - ✅ **Created Modal System** - Professional modal popups for AI failures and promotions (NordVPN-style)
   - New component: `components/ui/zentype-modal.tsx` (180+ lines)
   - Blurred backdrop, polymorphic gradient borders, theme-aware
@@ -414,4 +432,4 @@ zentype_v1/
 
 ---
 
-**End of Index - Last Updated: October 3, 2025**
+**End of Index - Last Updated: October 7, 2025**

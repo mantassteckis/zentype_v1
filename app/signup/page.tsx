@@ -112,7 +112,7 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] dark:bg-[#0A0A0A] light:bg-[#FFFFFF]">
+    <div className="min-h-screen bg-background">
       <Header />
 
       <main className="container mx-auto px-4 py-16">
@@ -121,8 +121,8 @@ export default function SignupPage() {
             <div className="w-16 h-16 bg-[#00A3FF] rounded-xl flex items-center justify-center mx-auto mb-4">
               <Keyboard className="h-8 w-8 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-white dark:text-white light:text-black mb-2">Join ZenType</h1>
-            <p className="text-gray-300 dark:text-gray-300 light:text-gray-600">
+            <h1 className="text-3xl font-bold text-foreground mb-2">Join ZenType</h1>
+            <p className="text-muted-foreground">
               Create your account and start improving your typing skills
             </p>
           </div>
@@ -130,52 +130,52 @@ export default function SignupPage() {
           <GlassCard className="space-y-6">
             <form onSubmit={(e) => { e.preventDefault(); handleSignup(); }} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="username" className="text-white dark:text-white light:text-black">
+                <Label htmlFor="username" className="text-foreground">
                   Username
                 </Label>
                 <div className="relative">
-                  <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="username"
                     type="text"
                     placeholder="Choose a username"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-gray-400"
+                    className="pl-10 bg-background/50 border-border text-foreground placeholder:text-muted-foreground"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-white dark:text-white light:text-black">
+                <Label htmlFor="email" className="text-foreground">
                   Email
                 </Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="email"
                     type="email"
                     placeholder="Enter your email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-gray-400"
+                    className="pl-10 bg-background/50 border-border text-foreground placeholder:text-muted-foreground"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-white dark:text-white light:text-black">
+                <Label htmlFor="password" className="text-foreground">
                   Password
                 </Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="password"
                     type="password"
                     placeholder="Create a password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-gray-400"
+                    className="pl-10 bg-background/50 border-border text-foreground placeholder:text-muted-foreground"
                   />
                 </div>
               </div>
@@ -191,10 +191,10 @@ export default function SignupPage() {
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-white/20" />
+                <span className="w-full border-t border-border" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-transparent px-2 text-gray-400">or</span>
+                <span className="bg-card px-2 text-muted-foreground">or</span>
               </div>
             </div>
 
@@ -203,7 +203,7 @@ export default function SignupPage() {
                 onClick={handleGoogleSignup}
                 variant="outline"
                 disabled={isLoading}
-                className="w-full border-white/20 text-white hover:bg-white/10 bg-transparent disabled:opacity-50"
+                className="w-full border-border text-foreground hover:bg-accent disabled:opacity-50"
               >
                 <Chrome className="mr-2 h-4 w-4" />
                 Sign in with Google
@@ -213,14 +213,14 @@ export default function SignupPage() {
                 onClick={() => console.log("Guest signup clicked - implement signInAnonymously later if needed")}
                 variant="ghost"
                 disabled={isLoading}
-                className="w-full text-gray-300 hover:text-white hover:bg-white/10 disabled:opacity-50"
+                className="w-full text-muted-foreground hover:text-foreground hover:bg-accent disabled:opacity-50"
               >
                 Continue as Guest
               </Button>
             </div>
 
             <div className="text-center text-sm">
-              <span className="text-gray-400">Already have an account? </span>
+              <span className="text-muted-foreground">Already have an account? </span>
               <Link href="/login" className="text-[#00A3FF] hover:underline">
                 Sign in
               </Link>
