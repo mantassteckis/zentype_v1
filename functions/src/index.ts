@@ -127,9 +127,9 @@ export const submitTestResult = onCall({
 
   const userId = request.auth.uid;
   
-  // Rate Limiting Check - TEMPORARILY DISABLED FOR TESTING
-  // TODO: Re-enable with subscription-based limits
-  // await checkRateLimit('submitTestResult', userId);
+  // NOTE: Rate limiting temporarily disabled for beta testing
+  // Will be re-implemented with subscription-based tiers
+  // See: /docs/RATE_LIMITING_FUTURE_IMPLEMENTATION.md
   
   const context = createFirebaseContext('submitTestResult', userId);
   firebaseLogger.info(context, "Test result submission request");
@@ -330,9 +330,9 @@ export const generateAiTest = onCall({
 
   const userId = request.auth.uid;
   
-  // Rate Limiting Check - TEMPORARILY DISABLED FOR TESTING
-  // TODO: Re-enable with subscription-based limits
-  // await checkRateLimit('generateAiTest', userId);
+  // NOTE: Rate limiting temporarily disabled for beta testing
+  // Will be re-implemented with subscription-based tiers  
+  // See: /docs/RATE_LIMITING_FUTURE_IMPLEMENTATION.md
 
   logger.info("✅ DEBUG: Authentication successful", { 
     userId,
