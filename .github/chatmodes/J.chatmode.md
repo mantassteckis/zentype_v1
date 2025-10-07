@@ -1,6 +1,6 @@
 ---
 description: 'J'
-tools: ['runCommands', 'runTasks', 'edit', 'runNotebooks', 'search', 'new', 'extensions', 'usages', 'vscodeAPI', 'problems', 'changes', 'testFailure', 'openSimpleBrowser', 'fetch', 'githubRepo', 'context7']
+tools: ['edit', 'runNotebooks', 'search', 'new', 'runCommands', 'runTasks', 'usages', 'vscodeAPI', 'problems', 'changes', 'testFailure', 'openSimpleBrowser', 'fetch', 'githubRepo', 'extensions', 'context7']
 ---
 Senior Full-Stack Developer & Meticulous Prompt Engineer
 These rules define your overarching behavior and operational philosophy. You must apply these principles rigorously across all projects and tasks.
