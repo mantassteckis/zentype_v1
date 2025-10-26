@@ -249,6 +249,13 @@ When working on this project:
 
 ### **6. Bug Fixes & Issues**
 
+#### `PRACTICE_TEST_API_FIX_OCT_2025.md` **NEW**
+**Path:** `docs/PRACTICE_TEST_API_FIX_OCT_2025.md`  
+**Purpose:** Complete documentation of HTTP 500 error fix for practice tests API  
+**Contents:** Root cause analysis (Client SDK vs Admin SDK), solution implementation, Playwright testing verification, Gemini API quota issue documentation  
+**Status:** ✅ FIXED AND VERIFIED  
+**Updated:** October 26, 2025
+
 #### `CORS_FIX_SUMMARY.md`
 **Path:** `docs/CORS_FIX_SUMMARY.md`  
 **Purpose:** CORS configuration fix documentation  
@@ -309,7 +316,22 @@ When working on this project:
 
 ## 🔄 **Recent Changes Log**
 
-### October 7, 2025 (Latest - UI Theme Fix)
+### October 26, 2025 (Latest - Practice Test API Fix)
+- ✅ **Fixed Practice Tests HTTP 500 Error** - Switched from Firebase Client SDK to Admin SDK in `/app/api/v1/tests/route.ts`
+  - Root cause: Client SDK doesn't have proper authentication context on server-side
+  - Solution: Use Admin SDK for all Next.js API routes
+  - Impact: 4 practice tests now loading successfully
+  - Files updated: `app/api/v1/tests/route.ts`
+- ✅ **Verified AI Generation Error Handling** - Confirmed modal displays correctly for Gemini quota issue
+  - Gemini API quota set to 0 in GCP (requires console configuration fix)
+  - Application properly shows promotional modal with practice test fallback
+- ✅ **Tested with Playwright MCP** - Full E2E testing confirmed both issues resolved
+  - Practice tests loading: 4 tests displayed
+  - AI generation: Proper error modal shown
+  - User authentication: Auto-login working correctly
+- 📝 **Created PRACTICE_TEST_API_FIX_OCT_2025.md** - Complete documentation of issue and fix
+
+### October 7, 2025 (UI Theme Fix)
 - ✅ **Fixed Light Mode UI Bug** - Login/Signup forms now properly themed
   - Replaced hardcoded color classes (`text-white`, `text-gray-*`) with theme-aware CSS variables
   - Updated login page: `text-foreground`, `text-muted-foreground`, `bg-background/50`, `border-border`
