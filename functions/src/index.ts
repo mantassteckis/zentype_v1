@@ -673,3 +673,120 @@ export const generateAiTest = onCall({
     throw new HttpsError("internal", "Failed to generate AI test");
   }
 });
+
+/**
+ * Test Gemini API Key Validation
+ * Verifies that the configured API key works before using it in production
+ * Returns detailed validation results
+ */
+export const testGeminiApiKey = onCall({
+  timeoutSeconds: 60,
+  memory: "256MiB",
+}, async (request) => {
+  const userId = request.auth?.uid;
+  
+  logger.info("🔑 API Key Validation Started", {
+    userId,
+    timestamp: new Date().toISOString(),
+  });
+
+  try {
+    // Import the generator function
+    const { generateTypingText } = require('./genkit_functions');
+    
+    // Test with a simple prompt
+    const testTopic = "Artificial Intelligence";
+    const testDifficulty = "Easy";
+    const testTimeLimit = 60;
+    
+    logger.debug("🔍 Testing API key with sample generation", {
+      topic: testTopic,
+      difficulty: testDifficulty,
+      timeLimit: testTimeLimit,
+    });
+
+    const startTime = Date.now();
+    const result = await generateTypingText(
+      testTopic,
+      testDifficulty,
+      testTimeLimit,
+      []
+    );
+    const duration = Date.now() - startTime;
+
+    if (!result || typeof result !== 'string' || result.trim().length === 0) {
+      logger.error("❌ API Key Validation Failed: Empty response", {
+        userId,
+        resultType: typeof result,
+        resultLength: result?.length || 0,
+      });
+      
+      return {
+        success: false,
+        message: "API key validation failed: Empty response from Gemini",
+        details: {
+          apiKeyConfigured: true,
+          responseReceived: false,
+          duration,
+        }
+      };
+    }
+
+    const wordCount = result.trim().split(/\s+/).length;
+
+    logger.info("✅ API Key Validation Successful", {
+      userId,
+      duration,
+      wordCount,
+      textLength: result.length,
+    });
+
+    return {
+      success: true,
+      message: "API key is valid and working correctly",
+      details: {
+        apiKeyConfigured: true,
+        responseReceived: true,
+        duration,
+        wordCount,
+        textLength: result.length,
+        sampleText: result.substring(0, 100) + "...",
+      }
+    };
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    
+    logger.error("❌ API Key Validation Failed", {
+      userId,
+      error: errorMessage,
+      errorStack,
+    });
+
+    // Check for specific error types
+    let errorType = "unknown";
+    let userMessage = "API key validation failed";
+
+    if (errorMessage.includes("429") || errorMessage.includes("quota")) {
+      errorType = "quota_exceeded";
+      userMessage = "API key quota exceeded or rate limited";
+    } else if (errorMessage.includes("401") || errorMessage.includes("403") || errorMessage.includes("API_KEY_INVALID")) {
+      errorType = "invalid_key";
+      userMessage = "API key is invalid or unauthorized";
+    } else if (errorMessage.includes("network") || errorMessage.includes("ECONNREFUSED")) {
+      errorType = "network_error";
+      userMessage = "Network error connecting to Gemini API";
+    }
+
+    return {
+      success: false,
+      message: userMessage,
+      details: {
+        apiKeyConfigured: true,
+        errorType,
+        errorMessage: errorMessage.substring(0, 200), // Limit error message length
+      }
+    };
+  }
+});
