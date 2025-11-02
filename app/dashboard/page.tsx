@@ -10,6 +10,7 @@ import { useEffect, useState } from "react"
 import { calculateUserStats } from "@/lib/firebase/firestore"
 import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore"
 import { db } from "@/lib/firebase/client"
+import ProgressChart from "@/components/dashboard/progress-chart"
 
 export default function DashboardPage() {
   const { user, profile, isLoading } = useAuth();
@@ -32,6 +33,13 @@ export default function DashboardPage() {
     createdAt: string;
   }>>([]);
 
+  const [progressData, setProgressData] = useState<Array<{
+    date: string;
+    wpm: number;
+    accuracy: number;
+    time: string;
+  }>>([]);
+
   useEffect(() => {
     console.log("📊 Dashboard - useEffect triggered");
     console.log("👤 Dashboard - User:", user ? user.uid : "null");
@@ -45,6 +53,9 @@ export default function DashboardPage() {
       
       // Fetch recent test results
       fetchRecentTests();
+      
+      // Fetch progress data for chart
+      fetchProgressData();
     } else if (user && !profile) {
       console.log("⚠️ Dashboard - User exists but no profile yet");
     } else if (!user) {
@@ -58,30 +69,73 @@ export default function DashboardPage() {
     try {
       console.log("🔍 Dashboard - Fetching recent test results...");
       const testResultsRef = collection(db, "testResults");
+      // Fetch without orderBy to avoid needing composite index
       const q = query(
         testResultsRef,
-        where("userId", "==", user.uid),
-        orderBy("createdAt", "desc"),
-        limit(5)
+        where("userId", "==", user.uid)
       );
       
       const querySnapshot = await getDocs(q);
-      const recentTestsData = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          wpm: data.wpm,
-          accuracy: data.accuracy,
-          testType: data.testType,
-          difficulty: data.difficulty,
-          createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt,
-        };
-      });
+      const recentTestsData = querySnapshot.docs
+        .map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            wpm: data.wpm,
+            accuracy: data.accuracy,
+            testType: data.testType,
+            difficulty: data.difficulty,
+            createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt,
+            timestamp: data.createdAt?.toDate ? data.createdAt.toDate().getTime() : 0,
+          };
+        })
+        // Sort client-side by timestamp descending
+        .sort((a, b) => b.timestamp - a.timestamp)
+        // Take only the 5 most recent
+        .slice(0, 5);
       
       console.log("✅ Dashboard - Recent tests fetched:", recentTestsData.length);
       setRecentTests(recentTestsData);
     } catch (error) {
       console.error("❌ Dashboard - Error fetching recent tests:", error);
+    }
+  };
+
+  const fetchProgressData = async () => {
+    if (!user) return;
+    
+    try {
+      console.log("📈 Dashboard - Fetching progress data for chart...");
+      const testResultsRef = collection(db, "testResults");
+      // Fetch without orderBy to avoid needing composite index
+      const q = query(
+        testResultsRef,
+        where("userId", "==", user.uid)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const chartData = querySnapshot.docs
+        .map(doc => {
+          const data = doc.data();
+          const testDate = data.createdAt?.toDate ? data.createdAt.toDate() : new Date();
+          return {
+            id: doc.id, // Unique ID for React keys
+            date: testDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            wpm: Math.round(data.wpm || 0),
+            accuracy: Math.round(data.accuracy || 0),
+            time: testDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+            timestamp: testDate.getTime(),
+          };
+        })
+        // Sort client-side by timestamp ascending (oldest to newest for chart)
+        .sort((a, b) => a.timestamp - b.timestamp)
+        // Take last 30 tests
+        .slice(-30);
+      
+      console.log("✅ Dashboard - Progress data fetched:", chartData.length);
+      setProgressData(chartData);
+    } catch (error) {
+      console.error("❌ Dashboard - Error fetching progress data:", error);
     }
   };
 
@@ -216,27 +270,23 @@ export default function DashboardPage() {
           </GlassCard>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8">
+        {/* Progress Chart - Full Width */}
+        <div className="mb-8">
           <GlassCard>
             <div className="flex items-center space-x-2 mb-6">
               <TrendingUp className="h-5 w-5 text-[#00BFFF]" />
-              <h2 className="text-xl font-semibold text-foreground">Progress Chart</h2>
+              <h2 className="text-xl font-semibold text-foreground">Your Progress</h2>
             </div>
-            <div className="h-64 bg-muted/20 rounded-lg p-4 flex items-center justify-center">
-              <div className="text-center space-y-3">
-                <div className="w-12 h-12 bg-muted/40 rounded-lg flex items-center justify-center mx-auto">
-                  <TrendingUp className="h-6 w-6 text-muted-foreground" />
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-sm">No progress data yet</p>
-                  <p className="text-muted-foreground text-xs">
-                    Take more tests to see your progress chart
-                  </p>
-                </div>
-              </div>
-            </div>
+            <ProgressChart 
+              data={progressData}
+              currentWpm={userStats?.avgWpm}
+              currentAccuracy={userStats?.avgAcc}
+            />
           </GlassCard>
+        </div>
 
+        {/* Recent Activity Card */}
+        <div>
           <GlassCard>
             <div className="flex items-center space-x-2 mb-6">
               <Clock className="h-5 w-5 text-[#00BFFF]" />
