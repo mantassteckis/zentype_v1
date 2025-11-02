@@ -3,6 +3,11 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@theme inline {
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-color-destructive-foreground: var(----color-destructive-foreground);
+}
+
 :root {
   /* Light mode colors */
   --background: oklch(1 0 0);
