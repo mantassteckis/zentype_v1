@@ -827,7 +827,161 @@ npm run dev
 
 ---
 
-## 📝 Future Error Records
+## � CRITICAL: AI Test Generation Failing Due to Firebase Secret Version Pinning
+
+### **Problem Description**
+- **Date**: November 2, 2025
+- **Severity**: Critical - AI test generation completely non-functional
+- **Symptoms**:
+  - HTTP 503 errors when generating AI tests
+  - HTTP 429 "Too Many Requests" quota errors
+  - Error: `Quota exceeded for quota metric 'Generate Content API requests per minute'`
+  - `quota_limit_value: "0"` in error response
+  - API key verified working with curl but fails in Cloud Functions
+  - Modal shows "Our AI service is experiencing high demand"
+
+### **Root Causes Identified**
+1. **Firebase Secret Version Pinning** - Cloud Functions continue using old secret version even after updating
+2. **GCP Project-Level Quotas** - Old API keys had 0 requests/minute quota at project level
+3. **Quota is Per-GCP-Project, Not Per-API-Key** - New API keys from same GCP project inherit quota limits
+4. **Deployment Doesn't Auto-Update Secrets** - Functions must be deleted and redeployed to pick up new secret versions
+5. **Secret Version References Cached** - Functions reference specific secret version numbers (e.g., version 2), not "latest"
+
+### **Technical Details from Logs**
+```
+ERROR: [429 Too Many Requests] Quota exceeded for quota metric 
+'Generate Content API requests per minute' and limit 
+'GenerateContent request limit per minute for a region' 
+of service 'generativelanguage.googleapis.com' 
+for consumer 'project_number:352844794812'.
+
+metadata: {
+  "quota_limit_value": "0",
+  "consumer": "projects/352844794812",
+  "quota_location": "us-central1"
+}
+
+Deployment logs showed:
+"secretEnvironmentVariables":[{"secret":"GEMINI_API_KEY","version":"2",...}]
+^ Still using version 2 even after creating version 5
+```
+
+### **Solution Applied**
+**Key Principle**: Delete and redeploy functions to force latest secret version pickup
+
+#### **1. Updated Firebase Secret (Multiple Attempts)**
+```bash
+# Created new secret versions (attempts 1-5)
+echo "NEW_API_KEY" | npx firebase functions:secrets:set GEMINI_API_KEY --project solotype-23c1f
+# Result: Created versions 1-5, but functions stayed on version 2
+```
+
+#### **2. Destroyed Old Secret Version**
+```bash
+# Force functions to stop using old version
+npx firebase functions:secrets:destroy GEMINI_API_KEY@2 --project solotype-23c1f --force
+# Result: Functions failed to deploy with "Secret Version in DESTROYED state"
+```
+
+#### **3. Deleted Functions Completely**
+```bash
+# Nuclear option: delete and recreate functions
+npx firebase functions:delete generateAiTest testGeminiApiKey --project solotype-23c1f --force
+# Result: Functions deleted successfully
+```
+
+#### **4. Fresh Deployment with Latest Secret**
+```bash
+# Deploy functions fresh (automatically picks up latest secret version)
+npx firebase deploy --only functions:generateAiTest,functions:testGeminiApiKey --project solotype-23c1f
+# Result: ✅ Functions now using secret version 5 (latest)
+```
+
+#### **5. Added API Key Validation Function**
+```typescript
+// Created testGeminiApiKey Cloud Function in functions/src/index.ts
+export const testGeminiApiKey = onCall({
+  timeoutSeconds: 60,
+  memory: "256MiB",
+}, async (request) => {
+  const userId = request.auth?.uid;
+  
+  try {
+    const { generateTypingText } = require('./genkit_functions');
+    const result = await generateTypingText("Artificial Intelligence", "Easy", 60, []);
+    
+    if (!result || result.trim().length === 0) {
+      return {
+        success: false,
+        message: "API key validation failed: Empty response from Gemini",
+      };
+    }
+
+    return {
+      success: true,
+      message: "API key is valid and working correctly",
+      details: { wordCount: result.trim().split(/\s+/).length }
+    };
+  } catch (error) {
+    // Detect specific error types: quota_exceeded, invalid_key, network_error
+    return {
+      success: false,
+      message: "API key validation failed",
+      details: { errorType, errorMessage }
+    };
+  }
+});
+```
+
+#### **6. Updated Local Environment Files**
+```typescript
+// functions/src/config.ts
+export const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 
+  'AIzaSyACx2y9xCXenJWzKysPYnf9suG6XnDVOys'; // New account API key
+
+// env.local
+GEMINI_API_KEY=AIzaSyACx2y9xCXenJWzKysPYnf9suG6XnDVOys
+```
+
+### **Verification Process**
+1. **Tested with Playwright MCP** - Automated browser testing
+2. **Generated Test 1** - "Space Exploration and Astronomy" (113 words, 808 chars) ✅
+3. **Generated Test 2** - "Vertex AI Studio" (106 words, 843 chars) ✅
+4. **Verified Firestore Save** - Both tests saved with proper IDs
+5. **Confirmed No Errors** - No 503/429 errors, clean logs
+
+### **Files Modified**
+1. **functions/src/index.ts** - Added testGeminiApiKey validation function
+2. **functions/src/config.ts** - Updated GEMINI_API_KEY fallback value
+3. **env.local** - Updated GEMINI_API_KEY for local development
+4. **Firebase Secret** - Created version 5, destroyed version 2
+5. **Cloud Functions** - Deleted and redeployed generateAiTest and testGeminiApiKey
+
+### **Key Lessons Learned**
+1. **Firebase Secrets use version pinning** - Functions don't auto-update to latest version
+2. **Deployment doesn't refresh secrets** - Must delete and redeploy to pick up new versions
+3. **GCP quotas are project-level** - New API keys from same project inherit quota limits
+4. **Test API keys before deploying** - Use curl to verify key works before updating secrets
+5. **Create validation functions** - Always have a way to test API keys without user-facing features
+6. **Document API key rotation** - Keep history of which keys were used and when
+7. **Quota limits are hidden** - Check GCP Console quotas page, not just API key settings
+
+### **Prevention Checklist**
+- [ ] Always test new API keys with curl before deploying
+- [ ] Check GCP project quotas, not just API key validity
+- [ ] Delete old secret versions after confirming new one works
+- [ ] Delete and redeploy functions (not just redeploy) when updating secrets
+- [ ] Create API key validation functions for pre-deployment testing
+- [ ] Document all API key changes with version numbers and dates
+- [ ] Verify secret version in deployment logs (`secretEnvironmentVariables`)
+- [ ] Use API keys from different GCP projects if quota issues persist
+
+### **Current Status**
+✅ **RESOLVED**: AI generation fully functional with new API key (AIzaSyACx2y9xCXenJWzKysPYnf9suG6XnDVOys) from different Google account. No rate limiting. Verified with Playwright MCP end-to-end testing.
+
+---
+
+## �📝 Future Error Records
 
 *This section will be updated as new errors are encountered and resolved.*
 
