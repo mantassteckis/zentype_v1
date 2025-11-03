@@ -222,7 +222,6 @@ const LogSearchDashboard: React.FC = () => {
                 <option value="">All Sources</option>
                 <option value="nextjs">Next.js</option>
                 <option value="firebase">Firebase</option>
-                <option value="vercel">Vercel</option>
               </select>
             </div>
           </div>

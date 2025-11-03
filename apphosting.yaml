@@ -1,0 +1,23 @@
+# Settings for Backend (on Cloud Run).
+# See https://firebase.google.com/docs/app-hosting/configure#cloud-run
+runConfig:
+  minInstances: 0
+  # maxInstances: 100
+  # concurrency: 80
+  # cpu: 1
+  # memoryMiB: 512
+
+# Environment variables and secrets.
+env:
+  # Configure environment variables.
+  # See https://firebase.google.com/docs/app-hosting/configure#user-defined-environment
+  - variable: FIREBASE_SERVICE_ACCOUNT_KEY
+    value: '{"type":"service_account","project_id":"solotype-23c1f","private_key_id":"c02945eb94f02cd27c267e25777ef778734578f8","private_key":"-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDlfMfznYv8eI/4\nplyvwTiMcr38bqXq+7adkLYZIHIg3h682TkJijm8DHC58QFuV7tj3kn/aqLq3LfR\n5fuDRBpzCsKt1nXMmYrGnscDEdoBS1vMl0Ah9w7H37m/pZGKEadgQSHALA9p1Ezv\nkuWPnSH7PV1OfTS5MESySm1jJRAa6hlwufGIyCSWGXL5MppclkMInajmgYHEn3Ps\n/vyvxTKozQMBOuXcM43GKJHKOWCVKuu1SrKz3PY4bx26nypO1NUKYK2aeqSVv995\n2tP1D/RYuNw8KnvM0tjY92oivcb+ZYUsrhXEfOhCLbmTq1ePNDjMWrRBcYZjPtzl\ng4B4fs1TAgMBAAECggEAEKZ8D3Xn2TqaH41afjoDs1UD6dPRX/pBZq9ANxR+k1nq\nWwNbuxB3Xeh9KVCOLQZah0VykwCWr3myMJ2CISUI0j3+oARGacDeK8kLYXKjIaLp\nFzAGLDCzttbJsFj/9UeQoFA5dar8t037AwricwgQlhz+rxowgBs7cMArrZzbzUf5\nwmqkOeMXocsLp2//PZ+gFJAwy11JKosG3hNwBlP4AJcc6AKhOcTuR5MZPbYW2yhH\nmoC2HEbf4pB7DXGD4/qRAuD75waIghyPJJ8iwbrg332jNwHWw1GH74xiv8xC6+cr\nlmVuv6TdluIYqT3wjBy8Tf0dH226hxKZLmDZWUJdiQKBgQDzLrLKYBdTNrbBkhOj\nChsHEgZC70hF/MfACVDVE4w0b/k/aQorPBcO0VzYy6CR7scEKdfCzyavMbSe6WCP\npOqPxAXYUHdWJI45CpOx3pcTybf7EQN+8qy24Z5x/YOkUPRiABNDakDKMI/Grnid\nnXm0xdu9DIoXxs+BthDGlN0hNwKBgQDxlUs5OFcmSAmDWGNbls8hP9m1IbKOUteS\nqm8a3P179SWEb5FNQkNdR71pYNVl+blphYKEYSHx4nnNepaqTdPSF1q8vQqZgvT1\n/2MplBiVDsmajVmbnLQymQ9Nhc/fzUFbS/3ErGmZGjG0epECFZ+TAdfmbw6g6BIY\nUdlbLqSyxQKBgBdnIBevxa7hbhcU2sTu/QjiKC4a3wa1O/f0LY5D8lM9j2wVzL+6\nabGoXloSxqIkq4xwBm6eBugHTY2Zggxw3430XGej3sgwfmto5CvS8xEZcZY83exC\nqHJ1Jg1sS1Xt4Ibp4PC08gVDRSLmuX7Zn9PQ0sPPyB5fqKqf/d9OhjVjAoGBAJX+\n3yTY8WtoYNe3YoF0goifb1oCYS3zC7wZrEBeo9h6HmA7MVlp4g+hwl4SbI0TX2bA\nKYhuErhvqLbG/ZMiHXmdXI5BRbqIz/WJKxWeySCLfOtEBjYTNuMPm6vDgIzxkTnR\nVe/uKOaRl/j5/NzxdhG9nEKMA+YuEUYeU7lEnagNAoGBAMqBUmIBIF44ZCuYfiNU\n3Y3reO2IARWZ32a4cK2RT/6W1ALAMqTWdVifNbJ1yC9qFIlaMgteHhia429fof46\nNLDT/lvRjcCfSNlICVLyaTXnk/jOxgLDs2+TNveMcan+/wBngfb4oLKTiHntF2+w\njp1jzdVput7eAD7er4rHbepB\n-----END PRIVATE KEY-----\n","client_email":"firebase-adminsdk-fbsvc@solotype-23c1f.iam.gserviceaccount.com","client_id":"107133145725955294252","auth_uri":"https://accounts.google.com/o/oauth2/auth","token_uri":"https://oauth2.googleapis.com/token","auth_provider_x509_cert_url":"https://www.googleapis.com/oauth2/v1/certs","client_x509_cert_url":"https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40solotype-23c1f.iam.gserviceaccount.com","universe_domain":"googleapis.com"}'
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # Grant access to secrets in Cloud Secret Manager.
+  # See https://firebase.google.com/docs/app-hosting/configure#secret-parameters
+  # - variable: MY_SECRET
+  #   secret: mySecretRef

@@ -61,7 +61,6 @@ When working on this project:
 ### **System Documentation**
 - `CENTRALIZED_LOGGING_CHECKLIST.md` - Logging standards
 - `LOG_RETENTION_ALERTING.md` - Log management
-- `VERCEL_LOG_DRAIN_SETUP.md` - Vercel logging config
 - `CORS_FIX_SUMMARY.md` - CORS configuration
 
 ---
@@ -204,12 +203,6 @@ When working on this project:
 **Path:** `docs/LOG_RETENTION_ALERTING.md`  
 **Purpose:** Log management strategy  
 **Contents:** Retention policies, alerting rules, monitoring setup  
-**Updated:** October 3, 2025
-
-#### `VERCEL_LOG_DRAIN_SETUP.md`
-**Path:** `docs/VERCEL_LOG_DRAIN_SETUP.md`  
-**Purpose:** Vercel log drainage configuration  
-**Contents:** Log export setup, external logging services integration  
 **Updated:** October 3, 2025
 
 ---
@@ -477,7 +470,7 @@ When creating new documentation files, follow this process:
 - **Frontend:** Next.js 15.5.4, React 18, TypeScript
 - **Backend:** Next.js API Routes, Firebase Cloud Functions
 - **Database:** Firestore
-- **Hosting:** Vercel
+- **Hosting:** Firebase App Hosting (Google Cloud Run)
 - **Authentication:** Firebase Auth
 
 ### **Project Structure**
