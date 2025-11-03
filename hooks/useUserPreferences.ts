@@ -64,6 +64,9 @@ if (typeof window !== 'undefined') {
   currentFontId = localStorage.getItem('zentype-typing-font') || "fira-code";
 }
 
+// Cache the snapshot to prevent infinite loops (React requirement)
+let cachedSnapshot = { themeId: currentThemeId, fontId: currentFontId };
+
 const preferencesStore = {
   subscribe(listener: Listener) {
     listeners.push(listener);
@@ -72,9 +75,11 @@ const preferencesStore = {
       if (e.key === 'zentype-typing-theme' || e.key === 'zentype-typing-font') {
         if (e.key === 'zentype-typing-theme' && e.newValue) {
           currentThemeId = e.newValue;
+          cachedSnapshot = { themeId: currentThemeId, fontId: currentFontId };
         }
         if (e.key === 'zentype-typing-font' && e.newValue) {
           currentFontId = e.newValue;
+          cachedSnapshot = { themeId: currentThemeId, fontId: currentFontId };
         }
         listeners.forEach((l) => l());
       }
@@ -87,19 +92,22 @@ const preferencesStore = {
     };
   },
   getSnapshot() {
-    return { themeId: currentThemeId, fontId: currentFontId };
+    return cachedSnapshot;
   },
   getServerSnapshot() {
-    return { themeId: "standard", fontId: "fira-code" };
+    // Must be cached for SSR (same instance returned every time)
+    return cachedSnapshot;
   },
   setTheme(themeId: string) {
     currentThemeId = themeId;
     localStorage.setItem('zentype-typing-theme', themeId);
+    cachedSnapshot = { themeId: currentThemeId, fontId: currentFontId };
     listeners.forEach((l) => l());
   },
   setFont(fontId: string) {
     currentFontId = fontId;
     localStorage.setItem('zentype-typing-font', fontId);
+    cachedSnapshot = { themeId: currentThemeId, fontId: currentFontId };
     listeners.forEach((l) => l());
   },
 };
