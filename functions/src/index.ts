@@ -1,6 +1,7 @@
 import {setGlobalOptions} from "firebase-functions";
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {onDocumentCreated} from "firebase-functions/v2/firestore";
+import {defineSecret} from "firebase-functions/params";
 import {initializeApp} from "firebase-admin/app";
 import {getFirestore} from "firebase-admin/firestore";
 import * as logger from "firebase-functions/logger";
@@ -12,6 +13,9 @@ export { vercelLogDrain } from './vercel-log-drain';
 // Initialize Firebase Admin
 initializeApp();
 const db = getFirestore();
+
+// Define secret for Gemini API Key
+const geminiApiKey = defineSecret('GEMINI_API_KEY');
 
 // Set global options for cost control
 setGlobalOptions({ maxInstances: 10 });
@@ -308,7 +312,8 @@ export const generateAiTest = onCall({
     "http://127.0.0.1:3001",
     "https://127.0.0.1:3001",
     "https://zentype-v0--solotype-23c1f.europe-west4.hosted.app"
-  ]
+  ],
+  secrets: [geminiApiKey]
 }, async (request) => {
   // Enhanced debug logging for Cloud Function entry
   logger.info("🔍 DEBUG: generateAiTest function called", {
