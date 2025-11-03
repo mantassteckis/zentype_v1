@@ -1,12 +1,38 @@
 import type React from "react"
-import { Inter } from "next/font/google"
+import { 
+  Inter,
+  Fira_Code,
+  JetBrains_Mono,
+  Source_Code_Pro,
+  Roboto_Mono,
+  Ubuntu_Mono,
+  Playfair_Display,
+  Lobster,
+  Pacifico,
+  Merriweather,
+  Righteous
+} from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/context/AuthProvider"
 import { DebugProvider } from "@/context/DebugProvider"
 import { EnhancedDebugPanel } from "@/components/debug/EnhancedDebugPanel"
 
-const inter = Inter({ subsets: ["latin"] })
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
+
+// Monospaced fonts for coding/serious typing
+const firaCode = Fira_Code({ subsets: ["latin"], variable: "--font-fira-code" })
+const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains-mono" })
+const sourceCodePro = Source_Code_Pro({ subsets: ["latin"], variable: "--font-source-code-pro" })
+const robotoMono = Roboto_Mono({ subsets: ["latin"], variable: "--font-roboto-mono" })
+const ubuntuMono = Ubuntu_Mono({ subsets: ["latin"], weight: ["400", "700"], variable: "--font-ubuntu-mono" })
+
+// Decorative fonts for fun/stylistic typing
+const playfairDisplay = Playfair_Display({ subsets: ["latin"], variable: "--font-playfair-display" })
+const lobster = Lobster({ subsets: ["latin"], weight: "400", variable: "--font-lobster" })
+const pacifico = Pacifico({ subsets: ["latin"], weight: "400", variable: "--font-pacifico" })
+const merriweather = Merriweather({ subsets: ["latin"], weight: ["400", "700"], variable: "--font-merriweather" })
+const righteous = Righteous({ subsets: ["latin"], weight: "400", variable: "--font-righteous" })
 
 export const metadata = {
   title: "ZenType - Find Your Flow. Master Your Typing.",
@@ -20,7 +46,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={`${inter.variable} ${firaCode.variable} ${jetbrainsMono.variable} ${sourceCodePro.variable} ${robotoMono.variable} ${ubuntuMono.variable} ${playfairDisplay.variable} ${lobster.variable} ${pacifico.variable} ${merriweather.variable} ${righteous.variable}`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
