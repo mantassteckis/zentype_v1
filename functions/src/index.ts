@@ -117,7 +117,8 @@ export const submitTestResult = onCall({
     "http://localhost:3001",
     "https://localhost:3001",
     "http://127.0.0.1:3001",
-    "https://127.0.0.1:3001"
+    "https://127.0.0.1:3001",
+    "https://zentype-v0--solotype-23c1f.europe-west4.hosted.app"
   ]
 }, async (request) => {
   const { startTime } = createTimingContext();
@@ -305,7 +306,8 @@ export const generateAiTest = onCall({
     "http://localhost:3001",
     "https://localhost:3001",
     "http://127.0.0.1:3001",
-    "https://127.0.0.1:3001"
+    "https://127.0.0.1:3001",
+    "https://zentype-v0--solotype-23c1f.europe-west4.hosted.app"
   ]
 }, async (request) => {
   // Enhanced debug logging for Cloud Function entry
