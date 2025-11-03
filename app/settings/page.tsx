@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { User, SettingsIcon, AlertTriangle, Trash2, Palette, Type } from "lucide-react"
 import { useAuth } from "@/context/AuthProvider"
 import { updateUserProfile } from "@/lib/firebase/firestore"
+import { useUserPreferences } from "@/hooks/useUserPreferences"
 
 export default function SettingsPage() {
   const { user, profile, isLoading } = useAuth()
@@ -24,79 +25,29 @@ export default function SettingsPage() {
   const [deleteConfirmation, setDeleteConfirmation] = useState("")
   const [isSaving, setIsSaving] = useState(false)
 
-  const [selectedTheme, setSelectedTheme] = useState("default")
-  const [selectedFont, setSelectedFont] = useState("fira-code")
+  // Use centralized preferences hook
+  const {
+    availableThemes,
+    availableFonts,
+    currentTheme,
+    currentFont,
+    dynamicTextColor,
+    setTheme,
+    setFont,
+  } = useUserPreferences()
 
-  const typingThemes = [
-    { id: "default", name: "Default", gradient: "from-background to-background", textColor: "text-foreground" },
-    { id: "neon-wave", name: "Neon Wave", gradient: "from-purple-900/20 to-cyan-900/20", textColor: "text-cyan-300" },
-    { id: "sunset", name: "Sunset", gradient: "from-orange-900/20 to-pink-900/20", textColor: "text-orange-200" },
-    { id: "forest", name: "Forest", gradient: "from-green-900/20 to-emerald-900/20", textColor: "text-green-200" },
-    { id: "ocean", name: "Ocean", gradient: "from-blue-900/20 to-teal-900/20", textColor: "text-blue-200" },
-    { id: "midnight", name: "Midnight", gradient: "from-slate-900/40 to-indigo-900/40", textColor: "text-slate-200" },
-  ]
-
-  const fontOptions = [
-    { id: "fira-code", name: "Fira Code", className: "font-mono" },
-    { id: "jetbrains-mono", name: "JetBrains Mono", className: "font-mono" },
-    { id: "source-code-pro", name: "Source Code Pro", className: "font-mono" },
-    { id: "roboto-mono", name: "Roboto Mono", className: "font-mono" },
-    { id: "ubuntu-mono", name: "Ubuntu Mono", className: "font-mono" },
-  ]
-
-  // Load profile data and preferences
+  // Load profile data (non-theme/font preferences)
   useEffect(() => {
     if (profile) {
       console.log("Settings - Loading profile data:", profile);
       console.log("Settings - Username from profile:", profile.username);
       setUsername(profile.username || "")
       setBio(profile.bio || "")
-      setSelectedTheme(profile.preferredThemeId || "default")
-      setSelectedFont(profile.preferredFontId || "fira-code")
       setKeyboardSounds(profile.settings?.keyboardSounds ?? true)
       setVisualFeedback(profile.settings?.visualFeedback ?? true)
       setAutoSaveAiTests(profile.settings?.autoSaveAiTests ?? false)
     }
   }, [profile])
-
-  // Load local storage preferences as fallback
-  useEffect(() => {
-    const savedTheme = localStorage.getItem("zentype-typing-theme")
-    const savedFont = localStorage.getItem("zentype-typing-font")
-
-    if (savedTheme && !profile?.preferredThemeId) setSelectedTheme(savedTheme)
-    if (savedFont && !profile?.preferredFontId) setSelectedFont(savedFont)
-  }, [profile])
-
-  const handleThemeChange = async (themeId: string) => {
-    setSelectedTheme(themeId)
-    localStorage.setItem("zentype-typing-theme", themeId)
-    
-    // Save to user profile if user is logged in
-    if (user && profile) {
-      try {
-        await updateUserProfile(user.uid, { preferredThemeId: themeId })
-        console.log("Theme preference saved to profile:", themeId)
-      } catch (error) {
-        console.error("Error saving theme preference:", error)
-      }
-    }
-  }
-
-  const handleFontChange = async (fontId: string) => {
-    setSelectedFont(fontId)
-    localStorage.setItem("zentype-typing-font", fontId)
-    
-    // Save to user profile if user is logged in
-    if (user && profile) {
-      try {
-        await updateUserProfile(user.uid, { preferredFontId: fontId })
-        console.log("Font preference saved to profile:", fontId)
-      } catch (error) {
-        console.error("Error saving font preference:", error)
-      }
-    }
-  }
 
   const handleDeleteAccount = () => {
     console.log("[v0] Delete account button clicked")
@@ -117,9 +68,6 @@ export default function SettingsPage() {
     setShowDeleteModal(false)
     setDeleteConfirmation("")
   }
-
-  const currentTheme = typingThemes.find((t) => t.id === selectedTheme) || typingThemes[0]
-  const currentFont = fontOptions.find((f) => f.id === selectedFont) || fontOptions[0]
 
   // Show loading state while authentication is being checked
   if (isLoading) {
@@ -209,17 +157,17 @@ export default function SettingsPage() {
               <p className="text-muted-foreground">Choose a visual theme for your typing practice area</p>
               <div className={`p-6 rounded-lg bg-gradient-to-br ${currentTheme.gradient} border border-border`}>
                 <p className="text-sm text-muted-foreground mb-2">Live Preview:</p>
-                <p className={`text-lg ${currentFont.className} ${currentTheme.textColor} leading-relaxed`}>
+                <p className={`text-lg ${currentFont.className} ${dynamicTextColor} leading-relaxed`}>
                   The quick brown fox jumps over the lazy dog. This is how your typing area will look.
                 </p>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {typingThemes.map((theme) => (
+                {availableThemes.map((theme) => (
                   <button
                     key={theme.id}
-                    onClick={() => handleThemeChange(theme.id)}
+                    onClick={() => setTheme(theme.id)}
                     className={`p-4 rounded-lg border-2 transition-all duration-300 ${
-                      selectedTheme === theme.id
+                      currentTheme.id === theme.id
                         ? "border-[#00BFFF] shadow-lg shadow-[#00BFFF]/20"
                         : "border-border hover:border-[#00BFFF]/50"
                     }`}
@@ -244,14 +192,21 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-4">
-              <p className="text-muted-foreground">Select your preferred monospaced font for typing practice</p>
-              <Select value={selectedFont} onValueChange={handleFontChange}>
-                <SelectTrigger className="w-full glass-card border-border bg-background/50">
+              <p className="text-muted-foreground">Select your preferred font (monospaced or decorative)</p>
+              <Select value={currentFont.id} onValueChange={setFont}>
+                <SelectTrigger className="w-48 h-9 glass-card border-border bg-background/50">
                   <SelectValue placeholder="Choose a font" />
                 </SelectTrigger>
-                <SelectContent className="glass-card border-border">
-                  {fontOptions.map((font) => (
-                    <SelectItem key={font.id} value={font.id} className={font.className}>
+                <SelectContent className="glass-card border-border max-h-[300px]">
+                  <div className="px-2 py-2 text-xs font-semibold text-muted-foreground">⌨️ Monospaced Fonts</div>
+                  {availableFonts.filter(f => f.isMonospace).map((font) => (
+                    <SelectItem key={font.id} value={font.id} className={`${font.className} py-2`}>
+                      {font.name}
+                    </SelectItem>
+                  ))}
+                  <div className="px-2 py-2 text-xs font-semibold text-muted-foreground mt-2">🎨 Decorative Fonts</div>
+                  {availableFonts.filter(f => !f.isMonospace).map((font) => (
+                    <SelectItem key={font.id} value={font.id} className={`${font.className} py-2`}>
                       {font.name}
                     </SelectItem>
                   ))}
@@ -260,7 +215,7 @@ export default function SettingsPage() {
 
               <div className={`p-6 glass-card border-border rounded-lg bg-gradient-to-br ${currentTheme.gradient}`}>
                 <p className="text-sm text-muted-foreground mb-2">Font Preview:</p>
-                <p className={`text-lg ${currentFont.className} ${currentTheme.textColor} leading-relaxed`}>
+                <p className={`text-lg ${currentFont.className} ${dynamicTextColor} leading-relaxed`}>
                   The quick brown fox jumps over the lazy dog. 1234567890
                   <br />
                   <span className="text-green-500">Correct characters</span>{" "}
@@ -414,8 +369,8 @@ export default function SettingsPage() {
                   await updateUserProfile(user.uid, {
                     username,
                     bio,
-                    preferredThemeId: selectedTheme,
-                    preferredFontId: selectedFont,
+                    preferredThemeId: currentTheme.id,
+                    preferredFontId: currentFont.id,
                     settings: {
                       keyboardSounds,
                       visualFeedback,

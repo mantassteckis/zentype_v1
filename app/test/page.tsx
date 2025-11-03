@@ -17,12 +17,8 @@ import { httpsCallable } from "firebase/functions"
 import { functions } from "@/lib/firebase/client"
 import { useDebugLogger } from "@/context/DebugProvider"
 import { useCorrelationId } from "@/hooks/useCorrelationId"
+import { useUserPreferences } from "@/hooks/useUserPreferences"
 // Removed Cloud Function imports - now using Next.js API route
-
-interface TypingCustomization {
-  theme: string
-  font: string
-}
 
 export default function TestPage(): JSX.Element | null {
   // Auth and user data
@@ -33,6 +29,17 @@ export default function TestPage(): JSX.Element | null {
   
   // Correlation ID for request tracing
   const { correlationId, getHeaders } = useCorrelationId();
+  
+  // Theme and font preferences
+  const {
+    availableThemes,
+    availableFonts,
+    currentTheme,
+    currentFont,
+    dynamicTextColor,
+    setTheme,
+    setFont,
+  } = useUserPreferences();
   
   // Core state management
   const router = useRouter();
@@ -59,10 +66,6 @@ export default function TestPage(): JSX.Element | null {
   const [selectedDifficulty, setSelectedDifficulty] = useState("Medium");
   const [topic, setTopic] = useState("");
   const [currentTestId, setCurrentTestId] = useState<string | null>(null);
-  const [typingCustomization, setTypingCustomization] = useState<TypingCustomization>({
-    theme: "default",
-    font: "fira-code",
-  });
 
   // Pre-made tests management state
   const [preMadeTests, setPreMadeTests] = useState<PreMadeTest[]>([]);
@@ -113,20 +116,7 @@ export default function TestPage(): JSX.Element | null {
     }
   }, [debugLogger, isMounted, user]);
 
-  // Load saved preferences (only after mount)
-  useEffect(() => {
-    if (!isMounted) return;
-    
-    const savedTheme = localStorage.getItem("zenTypeTheme");
-    const savedFont = localStorage.getItem("zenTypeFont");
-
-    if (savedTheme) {
-      setTypingCustomization((prev) => ({ ...prev, theme: savedTheme }));
-    }
-    if (savedFont) {
-      setTypingCustomization((prev) => ({ ...prev, font: savedFont }));
-    }
-  }, [isMounted]);
+  // Theme and font preferences are now managed by useUserPreferences hook (no local state needed)
 
   // Fetch pre-made tests from API
   useEffect(() => {
@@ -1182,25 +1172,7 @@ export default function TestPage(): JSX.Element | null {
   const timeOptions = ["30", "60", "120", "300"];
   const difficultyOptions = ["Easy", "Medium", "Hard"];
 
-  const typingThemes = [
-    { id: "default", name: "Default", gradient: "from-background to-background", textColor: "text-foreground" },
-    { id: "neon-wave", name: "Neon Wave", gradient: "from-purple-900/20 to-cyan-900/20", textColor: "text-cyan-300" },
-    { id: "sunset", name: "Sunset", gradient: "from-orange-900/20 to-pink-900/20", textColor: "text-orange-200" },
-    { id: "forest", name: "Forest", gradient: "from-green-900/20 to-emerald-900/20", textColor: "text-green-200" },
-    { id: "ocean", name: "Ocean", gradient: "from-blue-900/20 to-teal-900/20", textColor: "text-blue-200" },
-    { id: "midnight", name: "Midnight", gradient: "from-slate-900/40 to-indigo-900/40", textColor: "text-slate-200" },
-  ];
-
-  const fontOptions = [
-    { id: "fira-code", name: "Fira Code", className: "font-mono" },
-    { id: "jetbrains-mono", name: "JetBrains Mono", className: "font-mono" },
-    { id: "source-code-pro", name: "Source Code Pro", className: "font-mono" },
-    { id: "roboto-mono", name: "Roboto Mono", className: "font-mono" },
-    { id: "ubuntu-mono", name: "Ubuntu Mono", className: "font-mono" },
-  ];
-
-  const currentTheme = typingThemes.find((t) => t.id === typingCustomization.theme) || typingThemes[0];
-  const currentFont = fontOptions.find((f) => f.id === typingCustomization.font) || fontOptions[0];
+  // Theme and font data now comes from useUserPreferences hook
 
   // Configuration View
   if (view === 'config') {
@@ -1581,17 +1553,14 @@ export default function TestPage(): JSX.Element | null {
               <div className="flex items-center space-x-2">
                 <Palette className="h-4 w-4 text-muted-foreground" />
                 <Select
-                  value={typingCustomization.theme}
-                  onValueChange={(value) => {
-                    setTypingCustomization((prev) => ({ ...prev, theme: value }));
-                    localStorage.setItem("zenTypeTheme", value);
-                  }}
+                  value={currentTheme.id}
+                  onValueChange={setTheme}
                 >
                   <SelectTrigger className="w-32 h-8 text-xs glass-card border-border">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="glass-card border-border">
-                    {typingThemes.map((theme) => (
+                    {availableThemes.map((theme) => (
                       <SelectItem key={theme.id} value={theme.id} className="text-xs">
                         {theme.name}
                       </SelectItem>
@@ -1603,17 +1572,14 @@ export default function TestPage(): JSX.Element | null {
               <div className="flex items-center space-x-2">
                 <Type className="h-4 w-4 text-muted-foreground" />
                 <Select
-                  value={typingCustomization.font}
-                  onValueChange={(value) => {
-                    setTypingCustomization((prev) => ({ ...prev, font: value }));
-                    localStorage.setItem("zenTypeFont", value);
-                  }}
+                  value={currentFont.id}
+                  onValueChange={setFont}
                 >
                   <SelectTrigger className="w-32 h-8 text-xs glass-card border-border">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="glass-card border-border">
-                    {fontOptions.map((font) => (
+                    {availableFonts.map((font) => (
                       <SelectItem key={font.id} value={font.id} className={`text-xs ${font.className}`}>
                         {font.name}
                       </SelectItem>
@@ -1624,11 +1590,11 @@ export default function TestPage(): JSX.Element | null {
             </div>
 
             <div
-              className={`p-8 cursor-text bg-gradient-to-br ${currentTheme.gradient} glass-card rounded-lg border border-border/50 backdrop-blur-sm`}
+              className={`p-8 cursor-text bg-gradient-to-br ${currentTheme.gradient} rounded-lg border border-border shadow-lg transition-all duration-300`}
               onClick={() => inputRef.current?.focus()}
             >
               <div
-                className={`text-xl leading-relaxed mb-6 select-none ${currentFont.className} ${currentTheme.textColor} word-wrap break-word overflow-wrap break-word`}
+                className={`text-xl leading-relaxed mb-6 select-none ${currentFont.className} ${dynamicTextColor} word-wrap break-word overflow-wrap break-word`}
                 style={{ wordWrap: "break-word", overflowWrap: "break-word" }}
               >
                 {renderText()}
