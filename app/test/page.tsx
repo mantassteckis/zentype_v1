@@ -1626,47 +1626,6 @@ export default function TestPage(): JSX.Element | null {
               </div>
             </div>
 
-            {/* Virtual Keyboard */}
-            <GlassCard className="p-6">
-              <div className="space-y-2">
-                <div className="flex justify-center gap-1">
-                  {["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"].map((key) => (
-                    <div
-                      key={key}
-                      className="w-10 h-10 bg-accent rounded flex items-center justify-center text-foreground text-sm"
-                    >
-                      {key}
-                    </div>
-                  ))}
-                </div>
-                <div className="flex justify-center gap-1">
-                  {["A", "S", "D", "F", "G", "H", "J", "K", "L"].map((key) => (
-                    <div
-                      key={key}
-                      className="w-10 h-10 bg-accent rounded flex items-center justify-center text-foreground text-sm"
-                    >
-                      {key}
-                    </div>
-                  ))}
-                </div>
-                <div className="flex justify-center gap-1">
-                  {["Z", "X", "C", "V", "B", "N", "M"].map((key) => (
-                    <div
-                      key={key}
-                      className="w-10 h-10 bg-accent rounded flex items-center justify-center text-foreground text-sm"
-                    >
-                      {key}
-                    </div>
-                  ))}
-                </div>
-                <div className="flex justify-center">
-                  <div className="w-64 h-10 bg-accent rounded flex items-center justify-center text-foreground text-sm">
-                    SPACE
-                  </div>
-                </div>
-              </div>
-            </GlassCard>
-
             <div className="flex justify-center gap-4">
               <Button
                 onClick={togglePause}
