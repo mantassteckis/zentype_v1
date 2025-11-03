@@ -128,7 +128,118 @@ Before marking any feature "complete":
 
 ---
 
+---
+
+### ERROR-THEME-002: React Infinite Loop - getSnapshot Not Cached
+
+**Date:** November 3, 2025  
+**Severity:** CRITICAL  
+**Status:** ✅ RESOLVED
+
+#### Description
+During Playwright MCP testing, React threw a critical error: "The result of getSnapshot should be cached to avoid an infinite loop". This prevented the test page from loading correctly and caused maximum update depth exceeded errors.
+
+#### Root Cause
+The `getSnapshot()` function in the external store (preferencesStore) was creating a new object `{ themeId, fontId }` on every call. React's `useSyncExternalStore` requires the same object reference to be returned if the state hasn't changed, or it triggers infinite re-renders.
+
+#### Symptoms
+- Console error: `[ERROR] The result of getSnapshot should be cached to avoid an infinite loop`
+- Console error: `[ERROR] The result of getServerSnapshot should be cached to avoid an infinite loop`
+- Test page showed React error overlay on load
+- Application crashed with "Maximum update depth exceeded"
+- Infinite render loop detected by React DevTools
+
+#### Solution Applied
+
+**File Changed:** `/hooks/useUserPreferences.ts`
+
+**Before (Incorrect):**
+```typescript
+const preferencesStore = {
+  getSnapshot() {
+    return { themeId: currentThemeId, fontId: currentFontId }; // ❌ New object every time
+  },
+  getServerSnapshot() {
+    return { themeId: "standard", fontId: "fira-code" }; // ❌ New object every time
+  }
+};
+```
+
+**After (Correct):**
+```typescript
+// Cache the snapshot to prevent infinite loops (React requirement)
+let cachedSnapshot = { themeId: currentThemeId, fontId: currentFontId };
+
+const preferencesStore = {
+  subscribe(listener: Listener) {
+    // ... existing code ...
+    const storageListener = (e: StorageEvent) => {
+      if (e.key === 'zentype-typing-theme' && e.newValue) {
+        currentThemeId = e.newValue;
+        cachedSnapshot = { themeId: currentThemeId, fontId: currentFontId }; // ✅ Update cache
+      }
+      if (e.key === 'zentype-typing-font' && e.newValue) {
+        currentFontId = e.newValue;
+        cachedSnapshot = { themeId: currentThemeId, fontId: currentFontId }; // ✅ Update cache
+      }
+      listeners.forEach((l) => l());
+    };
+    // ...
+  },
+  getSnapshot() {
+    return cachedSnapshot; // ✅ Return same object if state unchanged
+  },
+  getServerSnapshot() {
+    return cachedSnapshot; // ✅ Must be same cached object for SSR
+  },
+  setTheme(themeId: string) {
+    currentThemeId = themeId;
+    localStorage.setItem('zentype-typing-theme', themeId);
+    cachedSnapshot = { themeId: currentThemeId, fontId: currentFontId }; // ✅ Update cache
+    listeners.forEach((l) => l());
+  },
+  setFont(fontId: string) {
+    currentFontId = fontId;
+    localStorage.setItem('zentype-typing-font', fontId);
+    cachedSnapshot = { themeId: currentThemeId, fontId: currentFontId }; // ✅ Update cache
+    listeners.forEach((l) => l());
+  }
+};
+```
+
+#### Key Changes
+1. Added `cachedSnapshot` variable initialized with current state
+2. Updated `getSnapshot()` to return cached object
+3. Updated `getServerSnapshot()` to return cached object (same instance)
+4. Updated `setTheme()` to update cached snapshot before notifying listeners
+5. Updated `setFont()` to update cached snapshot before notifying listeners
+6. Updated storage listener to update cached snapshot on cross-tab changes
+
+#### Files Changed
+- `/hooks/useUserPreferences.ts` - Lines 65-108 (external store implementation)
+
+#### Verification
+- ✅ Page loads without errors
+- ✅ Zero console errors after fix
+- ✅ Playwright MCP testing successful
+- ✅ Theme switching works correctly
+- ✅ Font switching works correctly
+- ✅ Fast Refresh works (715ms rebuild)
+
+#### Prevention Methods
+1. ✅ **Test early with Playwright MCP** - Caught error before code review
+2. ✅ **Follow React patterns** - useSyncExternalStore requires cached snapshots
+3. ✅ **Read React documentation** - External store pattern has specific requirements
+4. ✅ **Fix immediately** - Don't proceed with broken code
+5. ✅ **Commit after fix** - Only verified working code enters git history
+
+#### Git Commits
+- `59774ff` - Initial implementation (had this bug)
+- `f809de5` - Fix applied (this error resolved)
+
+---
+
 **Last Updated:** November 3, 2025  
-**Total Errors Logged:** 1  
-**Total Errors Resolved:** 1  
+**Total Errors Logged:** 2  
+**Total Errors Resolved:** 2  
 **Status:** ✅ Clean - No active errors
