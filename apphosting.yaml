@@ -14,7 +14,24 @@ env:
   # Note: Firebase App Hosting automatically provides service account credentials
   # No need to manually configure FIREBASE_SERVICE_ACCOUNT_KEY
 
+  # Non-sensitive public environment variables
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+    value: AIzaSyAipHBANeyyXgq1n9h2G33PAwtuXkMRu-w
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    value: solotype-23c1f.firebaseapp.com
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: solotype-23c1f
+  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    value: solotype-23c1f.firebasestorage.app
+  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    value: "39439361072"
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    value: 1:39439361072:web:27661c0d7e4e341a02b9f5
+
   # Grant access to secrets in Cloud Secret Manager.
   # See https://firebase.google.com/docs/app-hosting/configure#secret-parameters
-  # - variable: MY_SECRET
-  #   secret: mySecretRef
+  - variable: GEMINI_API_KEY
+    secret: GEMINI_API_KEY
+    # This references a secret stored in Google Cloud Secret Manager
+    # Run: firebase apphosting:secrets:set GEMINI_API_KEY
+    # Then enter your API key when prompted
