@@ -9,30 +9,17 @@ let db: ReturnType<typeof getFirestore>;
 if (getApps().length === 0) {
   try {
     if (process.env.NODE_ENV === 'production') {
-      // Production: Use service account key from environment variable
-      const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-      if (!serviceAccountKey) {
-        throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY environment variable is required in production');
-      }
-      
-      // Check if it's a JSON string or file path
-      let serviceAccount;
-      if (serviceAccountKey.startsWith('{')) {
-        // It's JSON content
-        serviceAccount = JSON.parse(serviceAccountKey);
-      } else {
-        // It's a file path
-        if (fs.existsSync(serviceAccountKey)) {
-          serviceAccount = JSON.parse(fs.readFileSync(serviceAccountKey, 'utf8'));
-        } else {
-          throw new Error(`Service account file not found: ${serviceAccountKey}`);
-        }
-      }
+      // Production: Firebase App Hosting provides Application Default Credentials (ADC)
+      // No service account JSON needed - credentials are automatically available
+      console.log('🚀 Initializing Firebase Admin SDK in production with ADC');
       
       app = initializeApp({
-        credential: cert(serviceAccount),
+        // Firebase App Hosting automatically provides credentials via ADC
+        // No credential parameter needed - it uses the built-in service account
         projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "solotype-23c1f",
       });
+      
+      console.log('✅ Firebase Admin SDK initialized with Application Default Credentials');
     } else {
       // Development: Try multiple approaches
       const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
