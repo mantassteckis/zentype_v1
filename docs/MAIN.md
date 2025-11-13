@@ -1,6 +1,6 @@
 # ZenType Documentation Index - AI Knowledge Base
 
-**Last Updated:** November 13, 2025 (Privacy & GDPR Compliance Documentation Added)  
+**Last Updated:** November 13, 2025 (Google OAuth Account Deletion Support Added)  
 **Purpose:** Central index for all project documentation - use this as entry point for AI assistance  
 **Production URL:** https://zentype-v1--solotype-23c1f.europe-west4.hosted.app/  
 **Old Production URL (Deprecated):** https://zentype-v0--solotype-23c1f.europe-west4.hosted.app/
@@ -457,9 +457,31 @@ When working on this project:
   - **Documentation Updated:**
     - `/docs/privacy/privacy.current.md` - Status updated to 100% complete
     - `/docs/MAIN.md` - Added privacy implementation entry to Recent Changes
-    - All lessons learned documented (5 new lessons added)
+    - All lessons learned documented (6 new lessons added)
 
 - 🗑️ **Account Deletion Previously Completed** - Firebase Extension installed and documented
+
+- 🔐 **Multi-Provider Account Deletion (Google OAuth Support Added)**
+  - **Problem Solved**: Google-authenticated users could not delete accounts (GDPR Article 17 violation)
+  - **Implementation**:
+    - Provider detection via `user.providerData[0].providerId`
+    - Email users: `EmailAuthProvider.credential()` + password input
+    - Google users: `reauthenticateWithPopup(user, GoogleAuthProvider)` + OAuth popup
+    - Conditional modal UI: Password field OR Google re-auth notice
+    - Google-specific error handling: popup-closed, popup-blocked
+  - **Testing Results**:
+    - ✅ Email user deletion: Password re-auth working
+    - ✅ Google user deletion: Popup re-auth working
+    - ✅ Account deleted successfully for both providers
+    - ✅ User signed out and redirected correctly
+  - **Files Modified**:
+    - `/app/settings/page.tsx` - Updated re-authentication logic + modal UI
+  - **Commits**:
+    - `36f65c4` - Login/signup error handling
+    - `9895e77` - Google OAuth re-authentication for account deletion
+  - **Documentation Updated**:
+    - `/docs/privacy/privacy.current.md` - Added Lesson 6 (Multi-Provider Re-Authentication)
+    - Updated sensitive areas section with Google OAuth support details
   - **Extension:** `delete-user-data-gdpr` (v0.1.25)
   - **Location:** `europe-west1` (Belgium) - EU/GDPR compliant
   - **Status:** 100% complete with API and UI

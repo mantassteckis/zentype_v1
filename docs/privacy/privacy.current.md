@@ -125,19 +125,26 @@
 
 ## 🔍 SENSITIVE AREAS
 
-### ✅ RESOLVED: Account Deletion API
-**Status**: Implemented and Tested
+### ✅ RESOLVED: Account Deletion API - Multi-Provider Support
+**Status**: Implemented and Tested (Email + Google OAuth)
 **Files**: `/app/api/v1/user/delete-account/route.ts`, `/app/settings/page.tsx`
 **Implementation**:
-- ✅ Requires re-authentication before deletion (modal with password confirmation)
+- ✅ Detects user authentication provider (`user.providerData[0].providerId`)
+- ✅ **Email/Password users**: Re-authenticate with `EmailAuthProvider.credential()`
+- ✅ **Google OAuth users**: Re-authenticate with `reauthenticateWithPopup(user, GoogleAuthProvider)`
+- ✅ Conditional modal UI: Shows password field for email users, Google notice for OAuth users
+- ✅ Google-specific error handling: popup-closed-by-user, popup-blocked
 - ✅ Verifies user owns the account being deleted
 - ✅ Logs deletion action with correlation ID and span tracking
 - ✅ Uses Firebase Admin SDK `deleteUser(uid)` (triggers extension automatically)
 - ✅ Does NOT manually delete data (extension handles cleanup via Cloud Functions)
 - ✅ UI shows clear warning about data loss
-- ✅ Tested with Playwright MCP - confirmed working
+- ✅ Tested with Playwright MCP:
+  - Email/password deletion: ✅ Working (2025-11-13)
+  - Google OAuth deletion: ✅ Working (2025-11-13)
 
-**Verification Date**: 2025-11-13
+**Verification Date**: 2025-11-13 (Updated with Google OAuth support)
+**GDPR Compliance**: Article 17 (Right to Erasure) - ALL authentication methods supported
 
 ---
 
@@ -302,6 +309,53 @@
 - Test consent persistence by reloading pages
 - Use saved credentials to test authenticated flows
 - Check console logs for API success messages
+
+### Lesson 6: Multi-Provider Re-Authentication for Account Deletion
+**Date**: 2025-11-13
+**Context**: User reported Google-authenticated users cannot delete accounts
+**Problem**: Original implementation only supported `EmailAuthProvider.credential()` for re-authentication, but Google users don't have passwords
+**GDPR Impact**: Violated Article 17 (Right to Erasure) for Google OAuth users
+
+**Solution Implemented**:
+1. **Provider Detection**: Check `user.providerData[0].providerId` to identify auth method
+2. **Conditional Re-Authentication**:
+   - `providerId === "password"`: Use `EmailAuthProvider.credential(email, password)` + `reauthenticateWithCredential()`
+   - `providerId === "google.com"`: Use `reauthenticateWithPopup(user, new GoogleAuthProvider())`
+3. **Conditional UI**:
+   - Email users: Show password input field
+   - Google users: Show blue notice "You'll be asked to re-authenticate with Google"
+4. **Google-Specific Errors**:
+   - `auth/popup-closed-by-user`: User-friendly message about cancellation
+   - `auth/popup-blocked`: Instructions to allow popups
+
+**Testing Results**:
+- ✅ Email user deletion: Password re-auth works correctly
+- ✅ Google user deletion: Popup re-auth works correctly
+- ✅ Console logs show correct provider: `[Settings] Re-authenticating user with provider: google.com`
+- ✅ Account deleted successfully: `[Settings] ✅ Account deleted successfully`
+- ✅ User signed out: `Auth state changed: undefined`
+- ✅ Redirected to homepage: `http://localhost:3000/?message=account-deleted`
+
+**Key Takeaways**:
+- Firebase Auth has provider-specific re-authentication methods
+- Must handle ALL authentication providers to ensure GDPR compliance
+- `user.providerData[0].providerId` returns "password", "google.com", "facebook.com", etc.
+- `reauthenticateWithPopup()` is the correct method for OAuth providers
+- Conditional UI improves UX - don't show password field to Google users
+- Always test with accounts from each authentication provider
+- GDPR Article 17 requires supporting ALL user types equally
+
+**Code Pattern**:
+```typescript
+const providerId = user.providerData[0]?.providerId || ""
+if (providerId === "google.com") {
+  const provider = new GoogleAuthProvider()
+  await reauthenticateWithPopup(user, provider)
+} else if (providerId === "password") {
+  const credential = EmailAuthProvider.credential(user.email, password)
+  await reauthenticateWithCredential(user, credential)
+}
+```
 
 ---
 
