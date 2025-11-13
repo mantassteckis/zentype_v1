@@ -14,7 +14,7 @@ import { User, SettingsIcon, AlertTriangle, Trash2, Palette, Type } from "lucide
 import { useAuth } from "@/context/AuthProvider"
 import { updateUserProfile } from "@/lib/firebase/firestore"
 import { useUserPreferences } from "@/hooks/useUserPreferences"
-import { EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth"
+import { EmailAuthProvider, reauthenticateWithCredential, GoogleAuthProvider, signInWithPopup, reauthenticateWithPopup } from "firebase/auth"
 import { auth } from "@/lib/firebase/client"
 
 export default function SettingsPage() {
@@ -75,7 +75,13 @@ export default function SettingsPage() {
       return
     }
 
-    if (!deletePassword) {
+    // Detect auth provider
+    const providerId = user.providerData[0]?.providerId || ""
+    const isGoogleUser = providerId === "google.com"
+    const isEmailUser = providerId === "password"
+
+    // Only require password for email/password users
+    if (isEmailUser && !deletePassword) {
       setDeleteError("Password is required")
       return
     }
@@ -84,13 +90,20 @@ export default function SettingsPage() {
     setDeleteError("")
 
     try {
-      console.log("[Settings] Re-authenticating user...")
+      console.log(`[Settings] Re-authenticating user with provider: ${providerId}`)
       
-      // Step 1: Re-authenticate the user
-      const credential = EmailAuthProvider.credential(user.email, deletePassword)
-      await reauthenticateWithCredential(user, credential)
-      
-      console.log("[Settings] Re-authentication successful")
+      // Step 1: Re-authenticate based on provider
+      if (isGoogleUser) {
+        const provider = new GoogleAuthProvider()
+        await reauthenticateWithPopup(user, provider)
+        console.log("[Settings] Google re-authentication successful")
+      } else if (isEmailUser) {
+        const credential = EmailAuthProvider.credential(user.email, deletePassword)
+        await reauthenticateWithCredential(user, credential)
+        console.log("[Settings] Email/password re-authentication successful")
+      } else {
+        throw new Error(`Unsupported authentication provider: ${providerId}`)
+      }
 
       // Step 2: Get fresh ID token (will have updated auth_time)
       const idToken = await user.getIdToken(true) // Force refresh
@@ -132,6 +145,10 @@ export default function SettingsPage() {
         setDeleteError("Incorrect password. Please try again.")
       } else if (error.code === 'auth/too-many-requests') {
         setDeleteError("Too many failed attempts. Please try again later.")
+      } else if (error.code === 'auth/popup-closed-by-user') {
+        setDeleteError("Google authentication was cancelled. Please try again.")
+      } else if (error.code === 'auth/popup-blocked') {
+        setDeleteError("Popup was blocked. Please allow popups and try again.")
       } else if (error.message) {
         setDeleteError(error.message)
       } else {
@@ -499,20 +516,32 @@ export default function SettingsPage() {
                   </p>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="delete-password" className="text-foreground font-medium">
-                    Enter your password to confirm:
-                  </Label>
-                  <Input
-                    id="delete-password"
-                    type="password"
-                    value={deletePassword}
-                    onChange={(e) => setDeletePassword(e.target.value)}
-                    placeholder="Your password"
-                    className="glass-card border-border bg-background/50 text-foreground placeholder:text-muted-foreground"
-                    disabled={isDeleting}
-                  />
-                </div>
+                {/* Conditional authentication UI based on provider */}
+                {user?.providerData[0]?.providerId === "password" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="delete-password" className="text-foreground font-medium">
+                      Enter your password to confirm:
+                    </Label>
+                    <Input
+                      id="delete-password"
+                      type="password"
+                      value={deletePassword}
+                      onChange={(e) => setDeletePassword(e.target.value)}
+                      placeholder="Your password"
+                      className="glass-card border-border bg-background/50 text-foreground placeholder:text-muted-foreground"
+                      disabled={isDeleting}
+                    />
+                  </div>
+                )}
+
+                {user?.providerData[0]?.providerId === "google.com" && (
+                  <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                    <p className="text-sm text-blue-400 font-medium mb-2">🔐 Google Account</p>
+                    <p className="text-sm text-muted-foreground">
+                      You'll be asked to re-authenticate with Google to confirm this deletion.
+                    </p>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="delete-confirmation" className="text-foreground font-medium">
@@ -546,7 +575,11 @@ export default function SettingsPage() {
                 </Button>
                 <Button
                   onClick={handleConfirmDeletion}
-                  disabled={deleteConfirmation !== "DELETE" || !deletePassword || isDeleting}
+                  disabled={
+                    deleteConfirmation !== "DELETE" || 
+                    (user?.providerData[0]?.providerId === "password" && !deletePassword) ||
+                    isDeleting
+                  }
                   className="flex-1 bg-destructive hover:bg-destructive/90 text-destructive-foreground disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isDeleting ? "Deleting..." : "Confirm Deletion"}
