@@ -17,6 +17,7 @@ export default function SignupPage() {
   const [username, setUsername] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [tosAccepted, setTosAccepted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
   const router = useRouter()
@@ -212,9 +213,29 @@ export default function SignupPage() {
                 </div>
               </div>
 
+              <div className="flex items-start space-x-3 p-4 rounded-lg border border-white/20 bg-white/5">
+                <input
+                  id="tos-checkbox"
+                  type="checkbox"
+                  checked={tosAccepted}
+                  onChange={(e) => setTosAccepted(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-gray-300 text-[#00A3FF] focus:ring-[#00A3FF] focus:ring-offset-0 bg-white/10 cursor-pointer"
+                />
+                <label htmlFor="tos-checkbox" className="text-sm text-gray-300 cursor-pointer">
+                  I agree to the{" "}
+                  <Link href="/terms-of-service" target="_blank" className="text-[#00A3FF] hover:underline">
+                    Terms of Service
+                  </Link>
+                  {" "}and{" "}
+                  <Link href="/privacy-policy" target="_blank" className="text-[#00A3FF] hover:underline">
+                    Privacy Policy
+                  </Link>
+                </label>
+              </div>
+
               <Button 
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || !tosAccepted}
                 className="w-full bg-[#00A3FF] hover:bg-[#0088cc] text-white disabled:opacity-50"
               >
                 {isLoading ? "Creating Account..." : "Create Account"}

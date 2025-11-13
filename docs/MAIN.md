@@ -357,6 +357,29 @@ When working on this project:
 **Status:** ✅ DRAFT (needs legal review)  
 **Updated:** November 13, 2025
 
+#### `app/privacy-policy/page.tsx` (LIVE PAGE)
+**Path:** `/app/privacy-policy/page.tsx`  
+**Purpose:** User-facing Privacy Policy page on the website  
+**Contents:** Complete GDPR-compliant privacy policy with Firebase hyperlinks, data controller info, user rights, contact information  
+**Links Added**:
+- Firebase Privacy: https://firebase.google.com/support/privacy
+- Firebase DPA: https://firebase.google.com/terms/data-processing-terms
+**Status:** ✅ LIVE  
+**Updated:** November 13, 2025
+
+#### `app/terms-of-service/page.tsx` (LIVE PAGE)
+**Path:** `/app/terms-of-service/page.tsx`  
+**Purpose:** User-facing Terms of Service page on the website  
+**Contents:** Comprehensive legal terms (13 sections) covering Firebase usage, data collection, user conduct, intellectual property, GDPR rights, termination, disclaimers, limitation of liability, indemnification, changes to terms, governing law, miscellaneous provisions, contact information  
+**Links Included**:
+- Firebase Terms: https://firebase.google.com/terms
+- Firebase Privacy: https://firebase.google.com/support/privacy
+- Firebase DPA: https://firebase.google.com/terms/data-processing-terms
+- Privacy Policy: /privacy-policy
+- Privacy Settings: /settings/privacy
+**Status:** ✅ LIVE  
+**Updated:** November 13, 2025
+
 ---
 
 ### **9. Account Deletion & User Rights**
@@ -412,6 +435,49 @@ When working on this project:
 ## 🔄 **Recent Changes Log**
 
 ### November 13, 2025 (Latest - Privacy & GDPR Implementation COMPLETE ✅)
+
+- 📝 **Terms of Service & Legal Compliance Enhancements**
+  - **Terms of Service Page Created** (`/app/terms-of-service/page.tsx`)
+    - 13 comprehensive sections covering all legal aspects
+    - Firebase-specific terms (Terms, Privacy, DPA links)
+    - GDPR compliance sections (data rights, EU storage)
+    - Acceptance of terms, user accounts, data collection (Firebase), user conduct
+    - Intellectual property, termination, disclaimers, limitation of liability
+    - Indemnification, changes to terms, governing law, contact information
+  
+  - **ToS Acceptance on Signup**
+    - Added required checkbox: "I agree to the Terms of Service and Privacy Policy"
+    - Create Account button disabled until checkbox checked
+    - Links open in new tabs for user review
+    - Explicit consent mechanism (GDPR-compliant)
+  
+  - **Privacy Policy Firebase Links**
+    - Added Firebase Privacy link: https://firebase.google.com/support/privacy
+    - Added Firebase DPA link: https://firebase.google.com/terms/data-processing-terms
+    - Links embedded in relevant data processing sections
+  
+  - **Header UI Fix**
+    - Fixed profile dropdown username/email overflow
+    - Long emails now truncate with ellipsis (e.g., "sugurugetojjk5...")
+    - Maintains consistent dropdown width and layout
+  
+  - **Testing & Verification**
+    - ✅ ToS page renders correctly with all 13 sections
+    - ✅ Signup requires ToS acceptance (button disabled until checked)
+    - ✅ All hyperlinks work correctly (Firebase, Privacy, ToS)
+    - ✅ Header dropdown displays properly without overflow
+    - ✅ Links open in new tabs as expected
+  
+  - **Files Modified**:
+    - `/app/terms-of-service/page.tsx` - New comprehensive ToS page
+    - `/app/signup/page.tsx` - Added ToS acceptance checkbox
+    - `/app/privacy-policy/page.tsx` - Added Firebase hyperlinks
+    - `/components/header.tsx` - Fixed truncation for long emails
+  
+  - **Documentation Updated**:
+    - `/docs/privacy/privacy.current.md` - Added Lesson 7 (ToS Integration)
+    - `/docs/MAIN.md` - Added ToS page entry and Firebase links documentation
+
 - ✅ **Privacy & GDPR Compliance Fully Implemented** - All 8 data subject rights now functional
   - **API Endpoints Created:**
     - `GET /api/v1/user/export-data` - GDPR Article 15 (Right to Access)

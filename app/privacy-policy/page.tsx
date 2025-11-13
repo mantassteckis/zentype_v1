@@ -143,10 +143,28 @@ export default function PrivacyPolicyPage() {
                   <span className="font-semibold text-foreground">Primary Storage:</span> europe-west1 (Belgium)
                 </p>
                 <p className="text-muted-foreground">
-                  <span className="font-semibold text-foreground">Provider:</span> Google Cloud Platform / Firebase
+                  <span className="font-semibold text-foreground">Provider:</span> Google Cloud Platform / Firebase (
+                  <a 
+                    href="https://firebase.google.com/support/privacy" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-[#00BFFF] hover:underline"
+                  >
+                    Privacy Information
+                  </a>
+                  )
                 </p>
                 <p className="text-muted-foreground">
-                  <span className="font-semibold text-foreground">DPA:</span> Data Processing Agreement in place with Google
+                  <span className="font-semibold text-foreground">DPA:</span> Data Processing Agreement in place with Google (
+                  <a 
+                    href="https://firebase.google.com/terms/data-processing-terms" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-[#00BFFF] hover:underline"
+                  >
+                    View DPA Terms
+                  </a>
+                  )
                 </p>
               </div>
             </div>

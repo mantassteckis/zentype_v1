@@ -357,6 +357,66 @@ if (providerId === "google.com") {
 }
 ```
 
+### Lesson 7: Terms of Service Integration & User Consent
+**Date**: 2025-11-13
+**Context**: Adding legal terms and requiring user acceptance on signup
+**Problem**: Users were creating accounts without explicitly agreeing to legal terms
+
+**Implementation**:
+1. **Created comprehensive Terms of Service page** (`/app/terms-of-service/page.tsx`)
+   - 13 sections covering all legal aspects
+   - Firebase-specific terms (data processing, DPA references)
+   - GDPR compliance sections
+   - Links to Firebase Terms, Privacy, and DPA
+
+2. **Added ToS acceptance checkbox to signup page**
+   - Custom checkbox component with links to ToS and Privacy Policy
+   - Required before account creation (Create Account button disabled until checked)
+   - Clear labeling: "I agree to the Terms of Service and Privacy Policy"
+   - Links open in new tabs for review
+
+3. **Added Firebase hyperlinks to Privacy Policy**
+   - Firebase Privacy link: `https://firebase.google.com/support/privacy`
+   - Firebase DPA link: `https://firebase.google.com/terms/data-processing-terms`
+   - Embedded in relevant sections about data processing
+
+4. **Fixed header UI overflow issue**
+   - Long email addresses (e.g., sugurugetojjk5@gmail.com) were overflowing profile dropdown
+   - Added `truncate` class to username and email in header
+   - Email now shows ellipsis: "sugurugetojjk5..."
+   - Maintains consistent dropdown width
+
+**Testing Results**:
+- ✅ ToS page renders correctly with all sections
+- ✅ Signup page shows checkbox with both links
+- ✅ Create Account button disabled until checkbox checked
+- ✅ Links open in new tabs correctly
+- ✅ Header dropdown displays truncated email properly
+- ✅ No overflow or layout issues
+
+**Key Takeaways**:
+- ToS acceptance must be explicit (checkbox), not implicit (buried in text)
+- Always link to current versions of legal documents
+- Firebase DPA is critical for B2B GDPR compliance
+- UI components must handle long text gracefully (truncation)
+- Test with real long email addresses to catch overflow issues
+- ToS should reference Firebase terms when using Firebase services
+- Users should be able to review terms before accepting (open in new tab)
+
+**Legal Best Practices Followed**:
+- Clear acceptance mechanism (checkbox)
+- Links to full terms easily accessible
+- No pre-checked boxes (user must actively consent)
+- Terms include Firebase-specific data processing details
+- GDPR-compliant language throughout
+- Contact information provided for legal inquiries
+
+**Files Modified**:
+- `/app/terms-of-service/page.tsx` - New ToS page (13 comprehensive sections)
+- `/app/signup/page.tsx` - Added ToS acceptance checkbox
+- `/app/privacy-policy/page.tsx` - Added Firebase hyperlinks (Privacy, DPA)
+- `/components/header.tsx` - Fixed username/email truncation
+
 ---
 
 ## 📋 IMPLEMENTATION COMPLETE
