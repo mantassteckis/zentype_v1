@@ -1,8 +1,9 @@
 # ZenType Documentation Index - AI Knowledge Base
 
-**Last Updated:** November 3, 2025 (Theme System Actually Implemented - Fixed Previous Agent's Incomplete Work)  
+**Last Updated:** November 13, 2025 (Privacy & GDPR Compliance Documentation Added)  
 **Purpose:** Central index for all project documentation - use this as entry point for AI assistance  
-**Production URL:** https://zentype-v0--solotype-23c1f.europe-west4.hosted.app/
+**Production URL:** https://zentype-v1--solotype-23c1f.europe-west4.hosted.app/  
+**Old Production URL (Deprecated):** https://zentype-v0--solotype-23c1f.europe-west4.hosted.app/
 
 ---
 
@@ -17,7 +18,9 @@
 - [5. Deployment & Operations](#5-deployment--operations)
 - [6. Bug Fixes & Issues](#6-bug-fixes--issues)
 - [7. Planning & Specifications](#7-planning--specifications)
-- [8. Agent Logs](#8-agent-logs)
+- [8. Privacy & GDPR Compliance](#8-privacy--gdpr-compliance) **← NEW**
+- [9. Account Deletion & User Rights](#9-account-deletion--user-rights) **← NEW**
+- [10. Agent Logs](#10-agent-logs)
 - [Recent Changes Log](#recent-changes-log)
 - [Key Project Facts](#key-project-facts-for-ai)
 
@@ -47,8 +50,18 @@ When working on this project:
 - `WORD_BASED_TYPING_IMPLEMENTATION_COMPLETE.md` - Word-based typing system
 - `WORD_BASED_TYPING_MIGRATION_PLAN.md` - Migration strategy
 - `ZENTYPE_AUTO_SAVE_SUCCESS_SUMMARY.md` - Auto-save implementation
-- `MODAL_SYSTEM_IMPLEMENTATION.md` - **NEW** - Modal system for AI failures and promotions
-- `MODAL_SYSTEM_DEPLOYMENT_SUMMARY.md` - **NEW** - Final deployment summary and checklist
+- `MODAL_SYSTEM_IMPLEMENTATION.md` - Modal system for AI failures and promotions
+- `MODAL_SYSTEM_DEPLOYMENT_SUMMARY.md` - Final deployment summary and checklist
+
+### **Privacy & Compliance** **← NEW**
+- `privacy/privacy.prd.md` - Privacy requirements and GDPR compliance plan
+- `privacy/privacy.scope.md` - Privacy scope and boundaries
+- `privacy/privacy.current.md` - Current privacy implementation status
+- `privacy/gdpr-data-processing.md` - Complete data processing documentation
+- `privacy/privacy-policy-template.md` - Privacy policy for users
+- `account-deletion/account-deletion.prd.md` - Account deletion requirements
+- `account-deletion/account-deletion.scope.md` - Account deletion scope
+- `account-deletion/account-deletion.current.md` - Account deletion status (Firebase Extension installed)
 
 ### **Development Guides**
 - `DEBUG_GUIDE.md` - Debug logging system
@@ -234,12 +247,19 @@ When working on this project:
 **Status:** ✅ COMPLETED - Ready for testing  
 **Updated:** October 3, 2025
 
-#### `MODAL_SYSTEM_DEPLOYMENT_SUMMARY.md` **NEW**
+#### `MODAL_SYSTEM_DEPLOYMENT_SUMMARY.md`
 **Path:** `docs/MODAL_SYSTEM_DEPLOYMENT_SUMMARY.md`  
 **Purpose:** Final deployment summary and production readiness checklist  
 **Contents:** Git status, deployment instructions, testing verification results, success metrics, troubleshooting guide  
 **Status:** ✅ READY FOR DEPLOYMENT  
 **Updated:** October 3, 2025
+
+#### `FIREBASE_APP_HOSTING_PRODUCTION_DEPLOYMENT_NOV_2025.md` **NEW**
+**Path:** `docs/FIREBASE_APP_HOSTING_PRODUCTION_DEPLOYMENT_NOV_2025.md`  
+**Purpose:** Complete Firebase App Hosting production deployment documentation  
+**Contents:** Backend configuration, environment variables, CORS fixes, production testing results, deployment timeline, troubleshooting guide  
+**Status:** ✅ COMPLETED - PRODUCTION LIVE  
+**Updated:** November 5, 2025
 
 ---
 
@@ -300,7 +320,86 @@ When working on this project:
 
 ---
 
-### **8. Agent Logs**
+### **8. Privacy & GDPR Compliance**
+
+#### `privacy/privacy.prd.md`
+**Path:** `docs/privacy/privacy.prd.md`  
+**Purpose:** Privacy and GDPR compliance requirements  
+**Contents:** All 8 GDPR data subject rights, cookie consent system, data processing details, implementation checklist  
+**Status:** ✅ COMPLETED  
+**Updated:** November 13, 2025
+
+#### `privacy/privacy.scope.md`
+**Path:** `docs/privacy/privacy.scope.md`  
+**Purpose:** Privacy implementation scope definition  
+**Contents:** Files to create/modify, protected areas, critical zones (consent storage, data export, account deletion API), testing requirements  
+**Status:** ✅ COMPLETED  
+**Updated:** November 13, 2025
+
+#### `privacy/privacy.current.md`
+**Path:** `docs/privacy/privacy.current.md`  
+**Purpose:** Current privacy implementation status  
+**Contents:** Phase-by-phase progress (Firebase extension installed, API endpoints pending), Firebase extension configuration, sensitive areas documentation  
+**Status:** 🔄 IN PROGRESS (25% complete)  
+**Updated:** November 13, 2025
+
+#### `privacy/gdpr-data-processing.md`
+**Path:** `docs/privacy/gdpr-data-processing.md`  
+**Purpose:** Complete GDPR data processing documentation  
+**Contents:** What data we collect, legal basis, storage locations (EU only), data processors (Google Cloud), security measures, retention policies  
+**Status:** ✅ COMPLETED  
+**Updated:** November 13, 2025
+
+#### `privacy/privacy-policy-template.md`
+**Path:** `docs/privacy/privacy-policy-template.md`  
+**Purpose:** User-facing privacy policy template  
+**Contents:** Complete privacy policy text covering all GDPR requirements, user rights, cookie information, data processors  
+**Status:** ✅ DRAFT (needs legal review)  
+**Updated:** November 13, 2025
+
+---
+
+### **9. Account Deletion & User Rights**
+
+#### `account-deletion/account-deletion.prd.md`
+**Path:** `docs/account-deletion/account-deletion.prd.md`  
+**Purpose:** GDPR-compliant account deletion requirements  
+**Contents:** Feature requirements, security measures, Firebase extension integration, implementation checklist  
+**Status:** ✅ COMPLETED  
+**Updated:** November 5, 2025
+
+#### `account-deletion/account-deletion.scope.md`
+**Path:** `docs/account-deletion/account-deletion.scope.md`  
+**Purpose:** Account deletion scope definition  
+**Contents:** Files to modify, protected areas, Firebase extension configuration, critical areas (HIGH RISK zones)  
+**Status:** ✅ COMPLETED  
+**Updated:** November 5, 2025
+
+#### `account-deletion/account-deletion.current.md`
+**Path:** `docs/account-deletion/account-deletion.current.md`  
+**Purpose:** Current account deletion implementation status  
+**Contents:** Firebase extension installed (`delete-user-data-gdpr`), Cloud Functions deployed in `europe-west1`, API implementation pending  
+**Status:** 🔄 IN PROGRESS (50% complete)  
+**Updated:** November 13, 2025
+
+#### `account-deletion/account-deletion.errors.md`
+**Path:** `docs/account-deletion/account-deletion.errors.md`  
+**Purpose:** Error tracking for account deletion feature  
+**Contents:** Error history with solutions and prevention methods  
+**Status:** ✅ READY (no errors yet)  
+**Updated:** November 5, 2025
+
+**Key Implementation Details:**
+- **Firebase Extension:** `delete-user-data-gdpr` (v0.1.25) installed
+- **Location:** `europe-west1` (Belgium) - EU/GDPR compliant
+- **Firestore Paths:** `users/{UID},testResults/{UID},aiTests/{UID}`
+- **Auto-Discovery:** Enabled (depth 5, fields: userId,uid,createdBy)
+- **Cloud Functions:** 3 functions deployed for deletion orchestration
+- **Next Steps:** Implement `/app/api/v1/user/delete-account/route.ts`
+
+---
+
+### **10. Agent Logs**
 
 #### `AGENT_LOG.md`
 **Path:** `docs/AGENT_LOG.md`  
@@ -312,7 +411,77 @@ When working on this project:
 
 ## 🔄 **Recent Changes Log**
 
-### November 3, 2025 (Latest - Theme System ACTUALLY IMPLEMENTED)
+### November 13, 2025 (Latest - Privacy & GDPR Compliance Documentation)
+- 📚 **Privacy & GDPR Compliance Documentation Created** - Complete IKB structure for privacy implementation
+  - **New Folder:** `/docs/privacy/` with 5 comprehensive documents
+  - **PRD:** Privacy requirements with all 8 GDPR data subject rights
+  - **Scope:** Boundaries, critical areas, interconnections with account deletion
+  - **Current Status:** Implementation progress tracking (25% complete)
+  - **Data Processing:** Complete GDPR documentation (what we collect, where it's stored, legal basis)
+  - **Privacy Policy:** User-facing template (ready for legal review)
+  
+- 🗑️ **Account Deletion Documentation Updated** - Firebase Extension installation documented
+  - **Extension Installed:** `delete-user-data-gdpr` (v0.1.25)
+  - **Location:** `europe-west1` (Belgium) - EU/GDPR compliant
+  - **Configured Paths:** `users/{UID},testResults/{UID},aiTests/{UID}`
+  - **Auto-Discovery:** Enabled (depth 5, search fields: userId,uid,createdBy)
+  - **Cloud Functions:** 3 functions deployed for deletion orchestration
+  - **Status:** 50% complete (extension ready, API pending)
+  
+- 🎯 **MAIN.md Updated** - Added Privacy & Account Deletion sections
+  - New section 8: Privacy & GDPR Compliance
+  - New section 9: Account Deletion & User Rights
+  - Updated last modified date
+  - Cross-referenced all privacy-related documentation
+  
+- 📝 **Key Lessons Learned:**
+  - EU data center configuration is critical for GDPR (must use `europe-west1`)
+  - Firebase extension triggers automatically when `admin.auth().deleteUser(uid)` is called
+  - Cookie consent must be granular (Strictly Necessary, Analytics, Functional, Advertising)
+  - GDPR requires implementing all 8 data subject rights, not just "delete account"
+
+### November 5, 2025 (Production Deployment Complete - Firebase App Hosting v1)
+- 🚀 **New Production Environment** - Deployed to Firebase App Hosting with correct repository
+  - **New URL:** https://zentype-v1--solotype-23c1f.europe-west4.hosted.app/
+  - **Backend ID:** zentype-v1 (replaces zentype-v0)
+  - **Repository:** mantassteckis/zentype_v1 (fixed from wrong dual-ling repo)
+  - **Region:** europe-west4 (Netherlands)
+  - **Deployment Method:** Firebase CLI rollouts (GitHub webhook not triggering)
+  
+- ✅ **Environment Variables Configured** - apphosting.yaml setup
+  - All `NEXT_PUBLIC_FIREBASE_*` configs in apphosting.yaml (committed to git)
+  - GEMINI_API_KEY via Google Cloud Secret Manager (granted IAM access)
+  - NO GitHub Secrets needed - Firebase manages everything
+  - Firebase Admin SDK uses Application Default Credentials (ADC) in production
+  
+- ✅ **CORS Fixed for New Domain** - Cloud Functions updated
+  - Added zentype-v1 domain to CORS whitelist in both `submitTestResult` and `generateAiTest`
+  - Functions redeployed to us-central1
+  - AI test generation now working in production
+  
+- ✅ **Production Testing Complete** - All 3 test cases verified with Playwright MCP
+  - **Case 1: Practice Test Submission** ✅ WORKING (13 WPM, 100% accuracy, saved to Firestore)
+  - **Case 2: AI-Generated Test** ✅ WORKING (after CORS fix, Gemini API functioning)
+  - **Case 3: Keyboard & Theme System** ✅ WORKING (virtual keyboard removed, 10 themes + 10 fonts active)
+  
+- 📝 **Git Commits** - 3 commits pushed to master
+  - `9d6d4f6` - feat: Configure Firebase App Hosting environment variables
+  - `379acc8` - fix: Use Application Default Credentials for Firebase Admin SDK in production
+  - `0552c8e` - chore: Exclude Playwright MCP screenshots from git tracking
+  
+- 🔧 **Infrastructure Cleanup**
+  - Deleted zentype-v0 backend (connected to wrong repo)
+  - Created zentype-v1 backend with correct mantassteckis/zentype_v1 repo
+  - Granted GEMINI_API_KEY secret access to new backend
+  - Playwright screenshots excluded from git (.playwright-mcp/, *.playwright-*.png)
+  
+- 📋 **Files Modified**
+  - `apphosting.yaml` - Environment variable configuration
+  - `lib/firebase-admin.ts` - ADC support for production
+  - `.gitignore` - Playwright MCP exclusions
+  - `functions/src/index.ts` - CORS configuration for new domain
+
+### November 3, 2025 (Theme System ACTUALLY IMPLEMENTED)
 - ✅ **Fixed Previous Agent's Incomplete Work** - Implemented theme system that was only documented
   - Previous agent (Oct 7) wrote docs but never implemented code
   - Settings page had hardcoded 6 themes (should be 10)
