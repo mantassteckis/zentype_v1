@@ -16,18 +16,39 @@ export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [errorMessage, setErrorMessage] = useState("")
   const router = useRouter()
 
   const handleLogin = async () => {
     if (isLoading) return
     
     setIsLoading(true)
+    setErrorMessage("") // Clear previous errors
+    
     try {
       await signInWithEmailAndPassword(auth, email, password)
       console.log("Login successful")
       router.push("/dashboard")
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error logging in with email and password:", error)
+      
+      // Provide user-friendly error messages
+      if (error.code === 'auth/invalid-credential') {
+        setErrorMessage("Invalid email or password. Please check your credentials and try again.")
+      } else if (error.code === 'auth/user-not-found') {
+        setErrorMessage("No account found with this email address.")
+      } else if (error.code === 'auth/wrong-password') {
+        setErrorMessage("Incorrect password. Please try again.")
+      } else if (error.code === 'auth/too-many-requests') {
+        setErrorMessage("Too many failed login attempts. Please try again later.")
+      } else if (error.code === 'auth/user-disabled') {
+        setErrorMessage("This account has been disabled. Please contact support.")
+      } else if (error.code === 'auth/invalid-email') {
+        setErrorMessage("Invalid email address format.")
+      } else {
+        setErrorMessage("Unable to sign in. Please try again later.")
+      }
+      
       setIsLoading(false)
     }
   }
@@ -36,13 +57,24 @@ export default function LoginPage() {
     if (isLoading) return
     
     setIsLoading(true)
+    setErrorMessage("") // Clear previous errors
+    
     try {
       const provider = new GoogleAuthProvider()
       const result = await signInWithPopup(auth, provider)
       console.log("Google login successful:", result.user.uid)
       router.push("/dashboard")
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error logging in with Google:", error)
+      
+      if (error.code === 'auth/popup-closed-by-user') {
+        setErrorMessage("Sign-in cancelled. Please try again.")
+      } else if (error.code === 'auth/account-exists-with-different-credential') {
+        setErrorMessage("An account already exists with the same email address but different sign-in credentials.")
+      } else {
+        setErrorMessage("Unable to sign in with Google. Please try again later.")
+      }
+      
       setIsLoading(false)
     }
   }
@@ -51,11 +83,14 @@ export default function LoginPage() {
     if (isLoading) return
     
     setIsLoading(true)
+    setErrorMessage("") // Clear previous errors
+    
     try {
       await signInAnonymously(auth)
       router.push("/dashboard")
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error signing in anonymously:", error)
+      setErrorMessage("Unable to sign in as guest. Please try again later.")
       setIsLoading(false)
     }
   }
@@ -77,6 +112,12 @@ export default function LoginPage() {
           </div>
 
           <GlassCard className="space-y-6">
+            {errorMessage && (
+              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+                <p className="text-red-400 text-sm">{errorMessage}</p>
+              </div>
+            )}
+            
             <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-white dark:text-white light:text-black">

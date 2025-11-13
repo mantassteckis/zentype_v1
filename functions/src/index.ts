@@ -120,7 +120,8 @@ export const submitTestResult = onCall({
     "https://localhost:3001",
     "http://127.0.0.1:3001",
     "https://127.0.0.1:3001",
-    "https://zentype-v0--solotype-23c1f.europe-west4.hosted.app"
+    "https://zentype-v0--solotype-23c1f.europe-west4.hosted.app",
+    "https://zentype-v1--solotype-23c1f.europe-west4.hosted.app"
   ]
 }, async (request) => {
   const { startTime } = createTimingContext();
@@ -309,7 +310,8 @@ export const generateAiTest = onCall({
     "https://localhost:3001",
     "http://127.0.0.1:3001",
     "https://127.0.0.1:3001",
-    "https://zentype-v0--solotype-23c1f.europe-west4.hosted.app"
+    "https://zentype-v0--solotype-23c1f.europe-west4.hosted.app",
+    "https://zentype-v1--solotype-23c1f.europe-west4.hosted.app"
   ],
   secrets: [geminiApiKey]
 }, async (request) => {

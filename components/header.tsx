@@ -103,29 +103,29 @@ export function Header(): JSX.Element {
                         <img
                           src={profile.photoURL || "/placeholder-user.jpg"}
                           alt="User Avatar"
-                          className="w-10 h-10 rounded-full object-cover"
+                          className="w-10 h-10 rounded-full object-cover flex-shrink-0"
                         />
-                        <div>
-                          <p className="text-sm font-medium text-foreground">{profile.username}</p>
-                          <p className="text-xs text-muted-foreground">{profile.email}</p>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate" title={profile.username}>{profile.username}</p>
+                          <p className="text-xs text-muted-foreground truncate" title={profile.email || undefined}>{profile.email}</p>
                         </div>
                       </div>
                     ) : user && !profile ? (
                       <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-gradient-to-r from-[#5D3FD3] to-[#00BFFF] rounded-full flex items-center justify-center">
+                        <div className="w-10 h-10 bg-gradient-to-r from-[#5D3FD3] to-[#00BFFF] rounded-full flex items-center justify-center flex-shrink-0">
                           <User className="h-5 w-5 text-white" />
                         </div>
-                        <div>
+                        <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-foreground">Loading...</p>
-                          <p className="text-xs text-muted-foreground">{user.email}</p>
+                          <p className="text-xs text-muted-foreground truncate" title={user.email || undefined}>{user.email}</p>
                         </div>
                       </div>
                     ) : (
                       <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-gradient-to-r from-[#5D3FD3] to-[#00BFFF] rounded-full flex items-center justify-center">
+                        <div className="w-10 h-10 bg-gradient-to-r from-[#5D3FD3] to-[#00BFFF] rounded-full flex items-center justify-center flex-shrink-0">
                           <User className="h-5 w-5 text-white" />
                         </div>
-                        <div>
+                        <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-foreground">Guest User</p>
                           <p className="text-xs text-muted-foreground">Not logged in</p>
                         </div>

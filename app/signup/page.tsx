@@ -17,13 +17,16 @@ export default function SignupPage() {
   const [username, setUsername] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [tosAccepted, setTosAccepted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [errorMessage, setErrorMessage] = useState("")
   const router = useRouter()
 
   const handleSignup = async () => {
     if (isLoading) return
     
     setIsLoading(true)
+    setErrorMessage("") // Clear previous errors
     console.log("🚀 SIGNUP STARTED - User inputs:", { username, email })
     
     try {
@@ -40,7 +43,7 @@ export default function SignupPage() {
       
       if (!profileData || !profileData.username) {
         console.error("❌ Profile creation failed - no data returned")
-        alert("Profile creation failed. Please try again.")
+        setErrorMessage("Profile creation failed. Please try again.")
         setIsLoading(false)
         return
       }
@@ -71,13 +74,26 @@ export default function SignupPage() {
         router.push("/dashboard")
       } else {
         console.error("❌ Could not verify profile creation")
-        alert("Profile creation issue. Please try logging in.")
+        setErrorMessage("Profile creation issue. Please try logging in.")
         setIsLoading(false)
       }
       
-    } catch (error) {
+    } catch (error: any) {
       console.error("💥 Signup error:", error)
-      alert(`Signup failed: ${error.message}`)
+      
+      // Provide user-friendly error messages
+      if (error.code === 'auth/email-already-in-use') {
+        setErrorMessage("An account with this email already exists. Please sign in instead.")
+      } else if (error.code === 'auth/invalid-email') {
+        setErrorMessage("Invalid email address format.")
+      } else if (error.code === 'auth/weak-password') {
+        setErrorMessage("Password is too weak. Please use at least 6 characters.")
+      } else if (error.code === 'auth/operation-not-allowed') {
+        setErrorMessage("Email/password accounts are not enabled. Please contact support.")
+      } else {
+        setErrorMessage(error.message || "Unable to create account. Please try again later.")
+      }
+      
       setIsLoading(false)
     }
   }
@@ -86,6 +102,8 @@ export default function SignupPage() {
     if (isLoading) return
     
     setIsLoading(true)
+    setErrorMessage("") // Clear previous errors
+    
     try {
       const provider = new GoogleAuthProvider()
       const result = await signInWithPopup(auth, provider)
@@ -98,15 +116,24 @@ export default function SignupPage() {
         user.uid, 
         user.email, 
         user.displayName || user.email?.split('@')[0] || 'user',
-        user.photoURL  // Don't pass undefined
+        user.photoURL || undefined
       )
       console.log("Google signup - Profile created:", profileData)
       
       setTimeout(() => {
         router.push("/dashboard")
       }, 1000)
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error signing up with Google:", error)
+      
+      if (error.code === 'auth/popup-closed-by-user') {
+        setErrorMessage("Sign-up cancelled. Please try again.")
+      } else if (error.code === 'auth/account-exists-with-different-credential') {
+        setErrorMessage("An account already exists with the same email address but different sign-in credentials.")
+      } else {
+        setErrorMessage("Unable to sign up with Google. Please try again later.")
+      }
+      
       setIsLoading(false)
     }
   }
@@ -128,6 +155,12 @@ export default function SignupPage() {
           </div>
 
           <GlassCard className="space-y-6">
+            {errorMessage && (
+              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+                <p className="text-red-400 text-sm">{errorMessage}</p>
+              </div>
+            )}
+            
             <form onSubmit={(e) => { e.preventDefault(); handleSignup(); }} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="username" className="text-white dark:text-white light:text-black">
@@ -180,9 +213,29 @@ export default function SignupPage() {
                 </div>
               </div>
 
+              <div className="flex items-start space-x-3 p-4 rounded-lg border border-white/20 bg-white/5">
+                <input
+                  id="tos-checkbox"
+                  type="checkbox"
+                  checked={tosAccepted}
+                  onChange={(e) => setTosAccepted(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-gray-300 text-[#00A3FF] focus:ring-[#00A3FF] focus:ring-offset-0 bg-white/10 cursor-pointer"
+                />
+                <label htmlFor="tos-checkbox" className="text-sm text-gray-300 cursor-pointer">
+                  I agree to the{" "}
+                  <Link href="/terms-of-service" target="_blank" className="text-[#00A3FF] hover:underline">
+                    Terms of Service
+                  </Link>
+                  {" "}and{" "}
+                  <Link href="/privacy-policy" target="_blank" className="text-[#00A3FF] hover:underline">
+                    Privacy Policy
+                  </Link>
+                </label>
+              </div>
+
               <Button 
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || !tosAccepted}
                 className="w-full bg-[#00A3FF] hover:bg-[#0088cc] text-white disabled:opacity-50"
               >
                 {isLoading ? "Creating Account..." : "Create Account"}

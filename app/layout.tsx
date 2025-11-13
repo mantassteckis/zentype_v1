@@ -17,6 +17,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/context/AuthProvider"
 import { DebugProvider } from "@/context/DebugProvider"
 import { EnhancedDebugPanel } from "@/components/debug/EnhancedDebugPanel"
+import { CookieConsentBanner } from "@/components/privacy/cookie-consent-banner"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 
@@ -57,6 +58,7 @@ export default function RootLayout({
             <AuthProvider>
               {children}
               <EnhancedDebugPanel />
+              <CookieConsentBanner />
             </AuthProvider>
           </DebugProvider>
         </ThemeProvider>

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Header } from "@/components/header"
 import { GlassCard } from "@/components/ui/glass-card"
 import { Button } from "@/components/ui/button"
@@ -13,9 +14,12 @@ import { User, SettingsIcon, AlertTriangle, Trash2, Palette, Type } from "lucide
 import { useAuth } from "@/context/AuthProvider"
 import { updateUserProfile } from "@/lib/firebase/firestore"
 import { useUserPreferences } from "@/hooks/useUserPreferences"
+import { EmailAuthProvider, reauthenticateWithCredential, GoogleAuthProvider, signInWithPopup, reauthenticateWithPopup } from "firebase/auth"
+import { auth } from "@/lib/firebase/client"
 
 export default function SettingsPage() {
   const { user, profile, isLoading } = useAuth()
+  const router = useRouter()
   const [username, setUsername] = useState("")
   const [bio, setBio] = useState("")
   const [keyboardSounds, setKeyboardSounds] = useState(true)
@@ -23,7 +27,10 @@ export default function SettingsPage() {
   const [autoSaveAiTests, setAutoSaveAiTests] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteConfirmation, setDeleteConfirmation] = useState("")
+  const [deletePassword, setDeletePassword] = useState("")
   const [isSaving, setIsSaving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState("")
 
   // Use centralized preferences hook
   const {
@@ -50,23 +57,114 @@ export default function SettingsPage() {
   }, [profile])
 
   const handleDeleteAccount = () => {
-    console.log("[v0] Delete account button clicked")
+    console.log("[Settings] Delete account button clicked")
     setShowDeleteModal(true)
+    setDeleteError("")
+    setDeletePassword("")
+    setDeleteConfirmation("")
   }
 
-  const handleConfirmDeletion = () => {
-    if (deleteConfirmation === "DELETE") {
-      console.log("[v0] Account deletion confirmed")
+  const handleConfirmDeletion = async () => {
+    if (!user || !user.email) {
+      setDeleteError("User not authenticated")
+      return
+    }
+
+    if (deleteConfirmation !== "DELETE") {
+      setDeleteError("You must type 'DELETE' to confirm")
+      return
+    }
+
+    // Detect auth provider
+    const providerId = user.providerData[0]?.providerId || ""
+    const isGoogleUser = providerId === "google.com"
+    const isEmailUser = providerId === "password"
+
+    // Only require password for email/password users
+    if (isEmailUser && !deletePassword) {
+      setDeleteError("Password is required")
+      return
+    }
+
+    setIsDeleting(true)
+    setDeleteError("")
+
+    try {
+      console.log(`[Settings] Re-authenticating user with provider: ${providerId}`)
+      
+      // Step 1: Re-authenticate based on provider
+      if (isGoogleUser) {
+        const provider = new GoogleAuthProvider()
+        await reauthenticateWithPopup(user, provider)
+        console.log("[Settings] Google re-authentication successful")
+      } else if (isEmailUser) {
+        const credential = EmailAuthProvider.credential(user.email, deletePassword)
+        await reauthenticateWithCredential(user, credential)
+        console.log("[Settings] Email/password re-authentication successful")
+      } else {
+        throw new Error(`Unsupported authentication provider: ${providerId}`)
+      }
+
+      // Step 2: Get fresh ID token (will have updated auth_time)
+      const idToken = await user.getIdToken(true) // Force refresh
+      
+      console.log("[Settings] Got fresh ID token, calling delete API...")
+
+      // Step 3: Call the delete account API
+      const response = await fetch('/api/v1/user/delete-account', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          confirmationText: deleteConfirmation,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to delete account')
+      }
+
+      console.log("[Settings] ✅ Account deleted successfully:", data)
+
+      // Step 4: Sign out and redirect to homepage
+      await auth.signOut()
+      
+      // Close modal and redirect
       setShowDeleteModal(false)
-      setDeleteConfirmation("")
-      // Placeholder functionality - would redirect to goodbye page
+      router.push('/?message=account-deleted')
+
+    } catch (error: any) {
+      console.error("[Settings] ❌ Account deletion failed:", error)
+      
+      // Handle specific errors
+      if (error.code === 'auth/wrong-password') {
+        setDeleteError("Incorrect password. Please try again.")
+      } else if (error.code === 'auth/too-many-requests') {
+        setDeleteError("Too many failed attempts. Please try again later.")
+      } else if (error.code === 'auth/popup-closed-by-user') {
+        setDeleteError("Google authentication was cancelled. Please try again.")
+      } else if (error.code === 'auth/popup-blocked') {
+        setDeleteError("Popup was blocked. Please allow popups and try again.")
+      } else if (error.message) {
+        setDeleteError(error.message)
+      } else {
+        setDeleteError("An unexpected error occurred. Please try again.")
+      }
+    } finally {
+      setIsDeleting(false)
     }
   }
 
   const handleCancelDeletion = () => {
-    console.log("[v0] Account deletion cancelled")
+    console.log("[Settings] Account deletion cancelled")
     setShowDeleteModal(false)
     setDeleteConfirmation("")
+    setDeletePassword("")
+    setDeleteError("")
   }
 
   // Show loading state while authentication is being checked
@@ -402,10 +500,48 @@ export default function SettingsPage() {
               </div>
 
               <div className="space-y-4">
-                <p className="text-muted-foreground">
-                  This action cannot be undone. All your typing data, progress, and account information will be
-                  permanently deleted.
-                </p>
+                <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20">
+                  <p className="text-sm text-destructive font-medium mb-2">⚠️ This action cannot be undone!</p>
+                  <p className="text-sm text-muted-foreground">
+                    The following data will be permanently deleted:
+                  </p>
+                  <ul className="text-sm text-muted-foreground mt-2 space-y-1 list-disc list-inside">
+                    <li>Your user profile and account information</li>
+                    <li>All your typing test results and statistics</li>
+                    <li>AI-generated tests you've created</li>
+                    <li>Your preferences and settings</li>
+                  </ul>
+                  <p className="text-xs text-muted-foreground mt-3">
+                    🇪🇺 <span className="font-semibold">GDPR Compliant:</span> Data deletion completes within 24 hours
+                  </p>
+                </div>
+
+                {/* Conditional authentication UI based on provider */}
+                {user?.providerData[0]?.providerId === "password" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="delete-password" className="text-foreground font-medium">
+                      Enter your password to confirm:
+                    </Label>
+                    <Input
+                      id="delete-password"
+                      type="password"
+                      value={deletePassword}
+                      onChange={(e) => setDeletePassword(e.target.value)}
+                      placeholder="Your password"
+                      className="glass-card border-border bg-background/50 text-foreground placeholder:text-muted-foreground"
+                      disabled={isDeleting}
+                    />
+                  </div>
+                )}
+
+                {user?.providerData[0]?.providerId === "google.com" && (
+                  <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                    <p className="text-sm text-blue-400 font-medium mb-2">🔐 Google Account</p>
+                    <p className="text-sm text-muted-foreground">
+                      You'll be asked to re-authenticate with Google to confirm this deletion.
+                    </p>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="delete-confirmation" className="text-foreground font-medium">
@@ -417,8 +553,15 @@ export default function SettingsPage() {
                     onChange={(e) => setDeleteConfirmation(e.target.value)}
                     placeholder="DELETE"
                     className="glass-card border-border bg-background/50 text-foreground placeholder:text-muted-foreground"
+                    disabled={isDeleting}
                   />
                 </div>
+
+                {deleteError && (
+                  <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                    <p className="text-sm text-destructive">{deleteError}</p>
+                  </div>
+                )}
               </div>
 
               <div className="flex space-x-3">
@@ -426,15 +569,20 @@ export default function SettingsPage() {
                   onClick={handleCancelDeletion}
                   variant="outline"
                   className="flex-1 border-border text-foreground hover:bg-accent bg-transparent"
+                  disabled={isDeleting}
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleConfirmDeletion}
-                  disabled={deleteConfirmation !== "DELETE"}
+                  disabled={
+                    deleteConfirmation !== "DELETE" || 
+                    (user?.providerData[0]?.providerId === "password" && !deletePassword) ||
+                    isDeleting
+                  }
                   className="flex-1 bg-destructive hover:bg-destructive/90 text-destructive-foreground disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Confirm Deletion
+                  {isDeleting ? "Deleting..." : "Confirm Deletion"}
                 </Button>
               </div>
             </GlassCard>
