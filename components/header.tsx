@@ -6,7 +6,7 @@ import { useState } from "react"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { Button } from "@/components/ui/button"
 import { GlassCard } from "@/components/ui/glass-card"
-import { Keyboard, User, Trophy, History, BarChart3, Settings, HelpCircle, LogOut } from "lucide-react"
+import { Keyboard, User, Trophy, History, BarChart3, Settings, FileText, Shield, LogOut } from "lucide-react"
 import { useAuth } from "@/context/AuthProvider";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
@@ -147,10 +147,22 @@ export function Header(): JSX.Element {
                           <Settings className="h-4 w-4 mr-3" />
                           Settings
                         </Link>
-                        <button className="flex items-center w-full px-4 py-3 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-all duration-200 rounded-lg mx-2">
-                          <HelpCircle className="h-4 w-4 mr-3" />
-                          Help & Support
-                        </button>
+                        <Link
+                          href="/terms-of-service"
+                          className="flex items-center w-full px-4 py-3 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-all duration-200 rounded-lg mx-2"
+                          onClick={() => setIsUserMenuOpen(false)}
+                        >
+                          <FileText className="h-4 w-4 mr-3" />
+                          Terms of Service
+                        </Link>
+                        <Link
+                          href="/privacy-policy"
+                          className="flex items-center w-full px-4 py-3 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-all duration-200 rounded-lg mx-2"
+                          onClick={() => setIsUserMenuOpen(false)}
+                        >
+                          <Shield className="h-4 w-4 mr-3" />
+                          Privacy Policy
+                        </Link>
                         <hr className="my-2 border-border mx-2" />
                         <button
                           onClick={handleSignOut}

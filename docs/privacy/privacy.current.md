@@ -521,6 +521,64 @@ if (providerId === "google.com") {
 **Files Modified**:
 - `/app/api/v1/user/export-data/route.ts` - Added sanitization function (150+ lines), applied before response
 
+### Lesson 9: UX Improvements - Legal Navigation & Password Visibility
+**Date**: 2025-11-13
+**Context**: User requested better access to Terms of Service and Privacy Policy, plus password visibility toggles
+**Problem**: Legal documents (ToS and Privacy Policy) were not easily accessible from user dropdown; password fields lacked visibility toggle
+
+**Implementation**:
+1. **Profile Dropdown Legal Links** (`/components/header.tsx`)
+   - Removed: "Help & Support" button (not yet implemented)
+   - Added: "Terms of Service" link with FileText icon
+   - Added: "Privacy Policy" link with Shield icon
+   - Same styling as Settings link (hover effects, transitions)
+   - Links appear between Settings and Sign Out separator
+
+2. **Password Visibility Toggle - Login Form** (`/app/login/page.tsx`)
+   - Added `showPassword` state (boolean)
+   - Added Eye and EyeOff icons from lucide-react
+   - Input type changes: `password` → `text` when toggle active
+   - Button positioned absolute right-3 inside input field
+   - Gray icon with hover effect (gray-400 → gray-300)
+   - Accessibility: `aria-label` with dynamic text
+
+3. **Password Visibility Toggle - Signup Form** (`/app/signup/page.tsx`)
+   - Same implementation as login form
+   - Single password field (no confirm password field in current design)
+   - Consistent styling across both forms
+
+**Testing Results** (Playwright MCP):
+- ✅ Profile dropdown displays Terms of Service and Privacy Policy links
+- ✅ ToS link navigates to `/terms-of-service` successfully
+- ✅ Privacy link navigates to `/privacy-policy` successfully
+- ✅ Login password toggle changes button from "Show password" to "Hide password"
+- ✅ Signup password toggle works identically
+- ✅ Eye/EyeOff icons display correctly
+- ✅ Password text becomes visible when toggled
+- ✅ No layout issues or styling conflicts
+
+**Key Takeaways**:
+- Legal documents should be easily accessible from primary navigation
+- Profile dropdown is ideal location for ToS/Privacy links (authenticated users)
+- Password visibility toggles are essential UX for modern web apps
+- Use semantic icons (FileText for ToS, Shield for Privacy)
+- Consistent styling across forms improves user experience
+- `aria-label` provides accessibility for screen readers
+- Eye/EyeOff icons are universally recognized for password visibility
+
+**Design Decisions**:
+- Placed legal links ABOVE the Sign Out separator (logical grouping)
+- Used FileText icon for ToS (document concept)
+- Used Shield icon for Privacy (protection concept)
+- Positioned toggle button inside input field (right side) - standard pattern
+- Toggle shows password in plain text (not masked) when active
+- No confirm password field in signup (Firebase handles validation)
+
+**Files Modified**:
+- `/components/header.tsx` - Replaced Help & Support with ToS and Privacy links
+- `/app/login/page.tsx` - Added password visibility toggle (Eye/EyeOff)
+- `/app/signup/page.tsx` - Added password visibility toggle (Eye/EyeOff)
+
 ---
 
 ## 📋 IMPLEMENTATION COMPLETE

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { GlassCard } from "@/components/ui/glass-card"
 import { Header } from "@/components/header"
-import { Keyboard, Mail, Lock, Chrome } from "lucide-react"
+import { Keyboard, Mail, Lock, Chrome, Eye, EyeOff } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signInAnonymously } from "firebase/auth"
 import { auth } from "@/lib/firebase/client"
@@ -15,6 +15,7 @@ import { auth } from "@/lib/firebase/client"
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
   const router = useRouter()
@@ -144,12 +145,24 @@ export default function LoginPage() {
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
                     id="password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-gray-400"
+                    className="pl-10 pr-10 bg-white/5 border-white/20 text-white placeholder:text-gray-400"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-300 transition-colors"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
                 </div>
               </div>
 

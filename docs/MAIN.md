@@ -434,7 +434,51 @@ When working on this project:
 
 ## 🔄 **Recent Changes Log**
 
-### November 13, 2025 (Latest - Data Export Security Hardening ✅)
+### November 13, 2025 (Latest - UX Improvements: Legal Links & Password Visibility ✅)
+
+- 🎨 **Profile Dropdown - Legal Navigation Links**
+  - **Problem**: Terms of Service and Privacy Policy not easily accessible from authenticated user interface
+  - **Solution**: Added legal links to profile dropdown menu
+    - Removed: "Help & Support" button (feature not yet implemented)
+    - Added: "Terms of Service" link with FileText icon
+    - Added: "Privacy Policy" link with Shield icon
+    - Positioned between Settings and Sign Out separator
+    - Same styling as Settings link (hover effects, transitions)
+  
+  - **Testing** (Playwright MCP):
+    - ✅ Profile dropdown displays both legal links correctly
+    - ✅ ToS link navigates to `/terms-of-service` successfully
+    - ✅ Privacy link navigates to `/privacy-policy` successfully
+    - ✅ Icons display correctly (FileText and Shield)
+  
+  - **File Modified**:
+    - `/components/header.tsx` - Updated profile dropdown menu
+
+- 👁️ **Password Visibility Toggle (Eye Icon)**
+  - **Problem**: Users couldn't verify password input (common UX pattern missing)
+  - **Solution**: Added password visibility toggle to login and signup forms
+    - Eye icon button (Eye/EyeOff from lucide-react)
+    - Positioned inside password input (absolute right-3)
+    - Toggles input type: `password` ↔ `text`
+    - Accessible: `aria-label` with dynamic text ("Show password" / "Hide password")
+    - Gray icon with hover effect (gray-400 → gray-300)
+  
+  - **Testing** (Playwright MCP):
+    - ✅ Login form: Toggle button changes from "Show password" to "Hide password"
+    - ✅ Signup form: Toggle button works identically
+    - ✅ Eye/EyeOff icons display correctly
+    - ✅ Password text becomes visible when toggled
+    - ✅ No layout issues or styling conflicts
+  
+  - **Files Modified**:
+    - `/app/login/page.tsx` - Added password visibility toggle
+    - `/app/signup/page.tsx` - Added password visibility toggle
+  
+  - **Documentation Updated**:
+    - `/docs/privacy/privacy.current.md` - Added Lesson 9 (UX Improvements)
+    - `/docs/MAIN.md` - Added UX improvements entry to Recent Changes Log
+
+### November 13, 2025 (Earlier - Data Export Security Hardening ✅)
 
 - 🔒 **Data Export Sanitization for Security**
   - **Problem Identified**: User-facing data export was exposing too much internal system information
