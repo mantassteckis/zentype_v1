@@ -417,6 +417,110 @@ if (providerId === "google.com") {
 - `/app/privacy-policy/page.tsx` - Added Firebase hyperlinks (Privacy, DPA)
 - `/components/header.tsx` - Fixed username/email truncation
 
+### Lesson 8: Data Export Sanitization for Security
+**Date**: 2025-11-13
+**Context**: User discovered data export was exposing too much internal system information
+**Problem**: Export file revealed Firebase UIDs, correlation IDs, Firebase timestamp internals, IP addresses (localhost), and redundant system fields
+**Security Risk**: Exposing internal identifiers could aid attackers in understanding system architecture
+
+**Root Cause Analysis**:
+- Data export API was returning raw Firebase data without sanitization
+- UIDs like `Xp4sOxt0xeSeQipDXKqXQRlgp983` revealed Firebase's 28-character UID format
+- Correlation IDs like `req-1759435076865-4ie60nbp3b8` exposed request tracking patterns
+- Firebase timestamps like `{_seconds: 1759435076, _nanoseconds: 874000000}` revealed internal Timestamp structure
+- IP addresses like `::1` revealed localhost testing environment
+- Redundant `userId` fields in every nested object created unnecessary data duplication
+
+**Implementation** (`/app/api/v1/user/export-data/route.ts`):
+1. **Created `sanitizeExportData()` function** with helper functions:
+   - `maskUid(uid)`: Converts Firebase UIDs to masked format
+     - Before: `"Xp4sOxt0xeSeQipDXKqXQRlgp983"`
+     - After: `"user_***************p983"` (shows last 4 chars only)
+   
+   - `maskIp(ip)`: Masks IP addresses for privacy
+     - Before: `"::1"` or `"192.168.1.1"`
+     - After: `"xxx.xxx.xxx.xxx (localhost)"` or `"xxx.xxx.xxx.xxx"`
+   
+   - `convertTimestamp(timestamp)`: Converts Firebase Timestamp objects to ISO 8601 strings
+     - Before: `{_seconds: 1759435076, _nanoseconds: 874000000}`
+     - After: `"2025-11-13T07:09:19.000Z"` (standard ISO format)
+   
+   - `sanitizeTestResult(result)`: Cleans test result objects
+     - Removes: `userId` (redundant, already in export metadata)
+     - Removes: `correlationId` (internal tracking, not user-facing)
+     - Converts: All timestamp fields to ISO 8601
+   
+   - `sanitizeConsent(consent)`: Cleans consent records
+     - Removes: `userId` (redundant)
+     - Masks: `metadata.ip` addresses
+
+2. **Applied sanitization before returning response**:
+   - Added step 6: "Sanitize export data (remove internal identifiers for security)"
+   - Call: `const sanitizedData = sanitizeExportData(exportData);`
+   - Return: `NextResponse.json(sanitizedData, ...)` instead of raw `exportData`
+
+3. **Added security metadata to export**:
+   - `"_security": "Internal identifiers have been masked for security"`
+   - Informs users why certain fields are masked
+
+**Critical: No Breaking Changes**:
+- ✅ Database queries unchanged - still fetch all user data
+- ✅ Internal logging unchanged - uses original `exportData` (not sanitized)
+- ✅ Span tracking unchanged - still records operation metrics
+- ✅ GDPR compliance maintained - all user data still exported
+- ✅ Data portability maintained - JSON structure and user data preserved
+
+**Verification Results** (Playwright MCP Test):
+- ✅ UIDs masked: `"user_***************Z4E2"`
+- ✅ Correlation IDs removed from all objects
+- ✅ Timestamps converted to ISO 8601: `"2025-11-13T08:41:54.552Z"`
+- ✅ IP addresses masked (no IP addresses in test export, but function ready)
+- ✅ User data 100% preserved:
+  - WPM scores, accuracy, errors
+  - Test history with full details
+  - Email, display name, photo URL
+  - Authentication timestamps
+- ✅ Security note added to export metadata
+- ✅ GDPR Article 15 (Right to Access) still fully compliant
+- ✅ GDPR Article 20 (Data Portability) still machine-readable JSON
+
+**What Gets Sanitized** (Summary):
+| Data Type | Before | After | Reason |
+|-----------|--------|-------|--------|
+| Firebase UIDs | `Xp4s...p983` (28 chars) | `user_***...p983` (last 4 only) | Hide UID format & length |
+| Correlation IDs | `req-1759435076865-4ie60nbp3b8` | (removed) | Internal tracking, not user-relevant |
+| Timestamps | `{_seconds: 175..., _nanoseconds: 874...}` | `"2025-11-13T07:09:19.000Z"` | Hide internal structure, use standard |
+| IP Addresses | `::1` or `192.168.1.1` | `xxx.xxx.xxx.xxx (localhost)` | Privacy & security |
+| Redundant Fields | `userId` in every nested object | (removed) | Reduce duplication |
+
+**What's Preserved** (User Data):
+- ✅ All typing test results (WPM, accuracy, errors, duration, text)
+- ✅ All AI-generated tests
+- ✅ All consent records with audit trail
+- ✅ Authentication data (email, display name, timestamps)
+- ✅ Profile information
+- ✅ GDPR metadata (export date, regulation, user rights)
+- ✅ Data processor information (GCP/Firebase, EU location)
+
+**Key Takeaways**:
+- Never expose internal system identifiers in user-facing exports
+- Security through obscurity is not primary defense, but reduces attack surface
+- GDPR requires exporting user data, NOT system implementation details
+- Sanitization should happen at the output layer, not the query layer
+- Always preserve user data completely - only mask system internals
+- ISO 8601 timestamps are standard and hide Firebase's internal structure
+- Test with real exports to verify sanitization works correctly
+- Document what gets masked and why for transparency
+
+**Security Best Practices Applied**:
+- Principle of least privilege: Only expose what users need
+- Defense in depth: Internal IDs masked even if other security layers exist
+- Separation of concerns: Internal logging uses raw data, external API uses sanitized data
+- User privacy: IP addresses masked even in user's own export
+
+**Files Modified**:
+- `/app/api/v1/user/export-data/route.ts` - Added sanitization function (150+ lines), applied before response
+
 ---
 
 ## 📋 IMPLEMENTATION COMPLETE

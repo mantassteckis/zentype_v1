@@ -6,6 +6,146 @@ import { CORRELATION_ID_HEADER } from '@/lib/correlation-id';
 import { app } from '@/lib/firebase-admin';
 
 /**
+ * Sanitizes export data to protect internal system details while maintaining GDPR compliance
+ * 
+ * Security Improvements:
+ * - Masks Firebase UIDs (keeps format but hides actual ID)
+ * - Removes correlation IDs (internal debugging)
+ * - Converts Firebase timestamps to ISO 8601 format
+ * - Masks IP addresses (shows format but not actual IP)
+ * - Removes redundant userId fields from nested objects
+ * 
+ * GDPR Compliance Maintained:
+ * - All user data preserved (tests, consents, profile)
+ * - Data remains machine-readable and portable
+ * - Satisfies Article 15 (Right to Access) and Article 20 (Data Portability)
+ */
+function sanitizeExportData(data: any): any {
+  // Helper: Mask UID (e.g., "Xp4sOxt0xeSeQipDXKqXQRlgp983" → "user_***************p983")
+  const maskUid = (uid: string): string => {
+    if (!uid || uid.length < 8) return uid;
+    return `user_***************${uid.slice(-4)}`;
+  };
+
+  // Helper: Mask IP address (e.g., "192.168.1.1" → "xxx.xxx.xxx.xxx")
+  const maskIp = (ip: string): string => {
+    if (!ip) return ip;
+    if (ip === '::1' || ip === 'localhost') return 'xxx.xxx.xxx.xxx (localhost)';
+    return 'xxx.xxx.xxx.xxx';
+  };
+
+  // Helper: Convert Firebase Timestamp to ISO 8601
+  const convertTimestamp = (timestamp: any): string => {
+    if (!timestamp) return '';
+    if (timestamp._seconds !== undefined) {
+      // Firebase Timestamp object
+      return new Date(timestamp._seconds * 1000).toISOString();
+    }
+    return timestamp; // Already a string
+  };
+
+  // Helper: Sanitize a single test result
+  const sanitizeTestResult = (test: any): any => {
+    const sanitized = { ...test };
+    
+    // Remove internal IDs
+    delete sanitized.userId; // Redundant (it's their export)
+    delete sanitized.correlationId; // Internal debugging ID
+    
+    // Convert Firebase timestamps to ISO
+    if (sanitized.createdAt) {
+      sanitized.createdAt = convertTimestamp(sanitized.createdAt);
+    }
+    
+    return sanitized;
+  };
+
+  // Helper: Sanitize consent records
+  const sanitizeConsent = (consent: any): any => {
+    const sanitized = { ...consent };
+    
+    // Remove redundant userId
+    delete sanitized.userId;
+    
+    // Mask IP addresses in consent records
+    if (sanitized.consents) {
+      Object.keys(sanitized.consents).forEach(key => {
+        if (sanitized.consents[key].ipAddress) {
+          sanitized.consents[key].ipAddress = maskIp(sanitized.consents[key].ipAddress);
+        }
+      });
+    }
+    
+    return sanitized;
+  };
+
+  // Start sanitization
+  const sanitized = {
+    ...data,
+    exportMetadata: {
+      ...data.exportMetadata,
+      userId: maskUid(data.exportMetadata.userId),
+      _security: 'Internal identifiers have been masked for security',
+    },
+  };
+
+  // Sanitize userData section
+  if (data.userData) {
+    sanitized.userData = { ...data.userData };
+
+    // Sanitize profile
+    if (data.userData.profile) {
+      sanitized.userData.profile = {
+        ...data.userData.profile,
+        uid: maskUid(data.userData.profile.uid),
+      };
+    }
+
+    // Sanitize test results
+    if (data.userData.testResults) {
+      sanitized.userData.testResults = {
+        ...data.userData.testResults,
+        results: data.userData.testResults.results.map(sanitizeTestResult),
+      };
+    }
+
+    // Sanitize AI-generated tests
+    if (data.userData.aiGeneratedTests) {
+      sanitized.userData.aiGeneratedTests = {
+        ...data.userData.aiGeneratedTests,
+        tests: data.userData.aiGeneratedTests.tests.map((test: any) => {
+          const sanitized = { ...test };
+          delete sanitized.createdBy; // Redundant (it's their export)
+          delete sanitized.correlationId;
+          if (sanitized.createdAt) {
+            sanitized.createdAt = convertTimestamp(sanitized.createdAt);
+          }
+          return sanitized;
+        }),
+      };
+    }
+
+    // Sanitize consent records
+    if (data.userData.consents) {
+      sanitized.userData.consents = {
+        ...data.userData.consents,
+        records: data.userData.consents.records.map(sanitizeConsent),
+      };
+    }
+
+    // Sanitize authentication data
+    if (data.userData.authenticationData) {
+      sanitized.userData.authenticationData = {
+        ...data.userData.authenticationData,
+        uid: maskUid(data.userData.authenticationData.uid),
+      };
+    }
+  }
+
+  return sanitized;
+}
+
+/**
  * GET /api/v1/user/export-data
  * 
  * GDPR-compliant data export endpoint (Article 15: Right to Access)
@@ -213,8 +353,12 @@ async function handleGET(request: NextRequest) {
         responseTime: Date.now() - startTime,
       });
 
-      // 6. Return JSON export
-      const response = NextResponse.json(exportData, { 
+      // 6. Sanitize export data (remove internal identifiers for security)
+      logger.info(context, 'Sanitizing export data for security');
+      const sanitizedData = sanitizeExportData(exportData);
+
+      // 7. Return JSON export
+      const response = NextResponse.json(sanitizedData, { 
         status: 200,
         headers: {
           'Content-Disposition': `attachment; filename="zentype-data-export-${userId}-${Date.now()}.json"`,

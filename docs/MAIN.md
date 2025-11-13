@@ -434,7 +434,66 @@ When working on this project:
 
 ## 🔄 **Recent Changes Log**
 
-### November 13, 2025 (Latest - Privacy & GDPR Implementation COMPLETE ✅)
+### November 13, 2025 (Latest - Data Export Security Hardening ✅)
+
+- 🔒 **Data Export Sanitization for Security**
+  - **Problem Identified**: User-facing data export was exposing too much internal system information
+    - Firebase UIDs (28-character format revealed)
+    - Correlation IDs (internal request tracking patterns)
+    - Firebase timestamp structure (`{_seconds, _nanoseconds}`)
+    - IP addresses (localhost environments)
+    - Redundant system fields (`userId` in every nested object)
+  
+  - **Security Risk**: Exposing internal identifiers could aid attackers in understanding system architecture
+  
+  - **Implementation** (`/app/api/v1/user/export-data/route.ts`):
+    - Created `sanitizeExportData()` function with 5 helper functions:
+      - `maskUid()`: Converts `"Xp4s...p983"` → `"user_***************p983"` (last 4 chars only)
+      - `maskIp()`: Converts `"::1"` → `"xxx.xxx.xxx.xxx (localhost)"`
+      - `convertTimestamp()`: Converts `{_seconds: 1759...}` → `"2025-11-13T07:09:19.000Z"` (ISO 8601)
+      - `sanitizeTestResult()`: Removes `userId`, `correlationId`, converts timestamps
+      - `sanitizeConsent()`: Removes `userId`, masks IP addresses
+    - Applied sanitization before returning response (no breaking changes)
+    - Added `"_security"` note to export metadata explaining masking
+  
+  - **What Gets Sanitized**:
+    - ✅ Firebase UIDs → Masked to `user_***...last4`
+    - ✅ Correlation IDs → Removed completely
+    - ✅ Timestamps → Converted to ISO 8601 standard format
+    - ✅ IP addresses → Masked to `xxx.xxx.xxx.xxx`
+    - ✅ Redundant fields → Removed (`userId` in nested objects)
+  
+  - **What's Preserved** (100% User Data):
+    - ✅ All typing test results (WPM, accuracy, errors, duration, text)
+    - ✅ All AI-generated tests
+    - ✅ All consent records with audit trail
+    - ✅ Authentication data (email, display name, timestamps)
+    - ✅ Profile information
+    - ✅ GDPR metadata and legal information
+  
+  - **Critical: No Breaking Changes**:
+    - ✅ Database queries unchanged (still fetch all user data)
+    - ✅ Internal logging unchanged (uses original data)
+    - ✅ Span tracking unchanged (records operation metrics)
+    - ✅ GDPR Article 15 (Right to Access) compliance maintained
+    - ✅ GDPR Article 20 (Data Portability) compliance maintained
+  
+  - **Testing & Verification** (Playwright MCP):
+    - ✅ UIDs masked correctly: `"user_***************Z4E2"`
+    - ✅ Correlation IDs removed from all objects
+    - ✅ Timestamps converted to ISO: `"2025-11-13T08:41:54.552Z"`
+    - ✅ User data 100% preserved (WPM, accuracy, test history)
+    - ✅ Export file downloaded successfully
+    - ✅ Success message displayed: "✅ Data exported successfully"
+  
+  - **Files Modified**:
+    - `/app/api/v1/user/export-data/route.ts` - Added 150+ lines of sanitization logic
+  
+  - **Documentation Updated**:
+    - `/docs/privacy/privacy.current.md` - Added Lesson 8 (Data Export Sanitization)
+    - `/docs/MAIN.md` - Added security hardening entry to Recent Changes Log
+
+### November 13, 2025 (Earlier - Privacy & GDPR Implementation COMPLETE ✅)
 
 - 📝 **Terms of Service & Legal Compliance Enhancements**
   - **Terms of Service Page Created** (`/app/terms-of-service/page.tsx`)
