@@ -116,7 +116,7 @@ export function CookieConsentBanner() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 p-4 md:p-6 animate-in slide-in-from-bottom duration-300">
-      <div className="glass-card max-w-4xl mx-auto border-2 border-[#00BFFF]/30 shadow-2xl">
+      <div className="max-w-4xl mx-auto border-2 border-[#00BFFF]/30 shadow-2xl rounded-2xl backdrop-blur-xl bg-white dark:bg-black/95">
         {!showCustomize ? (
           // Simple View
           <div className="p-6 space-y-4">
