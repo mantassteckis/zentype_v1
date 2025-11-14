@@ -5,7 +5,6 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { GlassCard } from "@/components/ui/glass-card"
 import { Header } from "@/components/header"
 import { Keyboard, User, Mail, Lock, Chrome, Eye, EyeOff } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -140,7 +139,7 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] dark:bg-[#0A0A0A] light:bg-[#FFFFFF]">
+    <div className="min-h-screen bg-background">
       <Header />
 
       <main className="container mx-auto px-4 py-16">
@@ -149,13 +148,13 @@ export default function SignupPage() {
             <div className="w-16 h-16 bg-[#00A3FF] rounded-xl flex items-center justify-center mx-auto mb-4">
               <Keyboard className="h-8 w-8 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-white dark:text-white light:text-black mb-2">Join ZenType</h1>
-            <p className="text-gray-300 dark:text-gray-300 light:text-gray-600">
+            <h1 className="text-3xl font-bold text-foreground mb-2">Join ZenType</h1>
+            <p className="text-muted-foreground">
               Create your account and start improving your typing skills
             </p>
           </div>
 
-          <GlassCard className="space-y-6">
+          <div className="space-y-6 rounded-2xl backdrop-blur-xl bg-card p-6 border border-border shadow-lg">
             {errorMessage && (
               <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
                 <p className="text-red-400 text-sm">{errorMessage}</p>
@@ -164,57 +163,57 @@ export default function SignupPage() {
             
             <form onSubmit={(e) => { e.preventDefault(); handleSignup(); }} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="username" className="text-white dark:text-white light:text-black">
+                <Label htmlFor="username" className="text-foreground">
                   Username
                 </Label>
                 <div className="relative">
-                  <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="username"
                     type="text"
                     placeholder="Choose a username"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-gray-400"
+                    className="pl-10 bg-background border-input text-foreground placeholder:text-muted-foreground"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-white dark:text-white light:text-black">
+                <Label htmlFor="email" className="text-foreground">
                   Email
                 </Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="email"
                     type="email"
                     placeholder="Enter your email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-gray-400"
+                    className="pl-10 bg-background border-input text-foreground placeholder:text-muted-foreground"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-white dark:text-white light:text-black">
+                <Label htmlFor="password" className="text-foreground">
                   Password
                 </Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="Create a password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 pr-10 bg-white/5 border-white/20 text-white placeholder:text-gray-400"
+                    className="pl-10 pr-10 bg-background border-input text-foreground placeholder:text-muted-foreground"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-300 transition-colors"
+                    className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
                     aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? (
@@ -226,15 +225,15 @@ export default function SignupPage() {
                 </div>
               </div>
 
-              <div className="flex items-start space-x-3 p-4 rounded-lg border border-white/20 bg-white/5">
+              <div className="flex items-start space-x-3 p-4 rounded-lg border border-border bg-secondary">
                 <input
                   id="tos-checkbox"
                   type="checkbox"
                   checked={tosAccepted}
                   onChange={(e) => setTosAccepted(e.target.checked)}
-                  className="mt-1 h-4 w-4 rounded border-gray-300 text-[#00A3FF] focus:ring-[#00A3FF] focus:ring-offset-0 bg-white/10 cursor-pointer"
+                  className="mt-1 h-4 w-4 rounded border-input text-[#00A3FF] focus:ring-[#00A3FF] focus:ring-offset-0 bg-background cursor-pointer"
                 />
-                <label htmlFor="tos-checkbox" className="text-sm text-gray-300 cursor-pointer">
+                <label htmlFor="tos-checkbox" className="text-sm text-foreground cursor-pointer">
                   I agree to the{" "}
                   <Link href="/terms-of-service" target="_blank" className="text-[#00A3FF] hover:underline">
                     Terms of Service
@@ -257,10 +256,10 @@ export default function SignupPage() {
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-white/20" />
+                <span className="w-full border-t border-border" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-transparent px-2 text-gray-400">or</span>
+                <span className="bg-card px-2 text-muted-foreground">or</span>
               </div>
             </div>
 
@@ -269,7 +268,7 @@ export default function SignupPage() {
                 onClick={handleGoogleSignup}
                 variant="outline"
                 disabled={isLoading}
-                className="w-full border-white/20 text-white hover:bg-white/10 bg-transparent disabled:opacity-50"
+                className="w-full disabled:opacity-50"
               >
                 <Chrome className="mr-2 h-4 w-4" />
                 Sign in with Google
@@ -279,19 +278,19 @@ export default function SignupPage() {
                 onClick={() => console.log("Guest signup clicked - implement signInAnonymously later if needed")}
                 variant="ghost"
                 disabled={isLoading}
-                className="w-full text-gray-300 hover:text-white hover:bg-white/10 disabled:opacity-50"
+                className="w-full disabled:opacity-50"
               >
                 Continue as Guest
               </Button>
             </div>
 
             <div className="text-center text-sm">
-              <span className="text-gray-400">Already have an account? </span>
+              <span className="text-muted-foreground">Already have an account? </span>
               <Link href="/login" className="text-[#00A3FF] hover:underline">
                 Sign in
               </Link>
             </div>
-          </GlassCard>
+          </div>
         </div>
       </main>
     </div>
