@@ -14,17 +14,12 @@ Any changes you make to your deployed app will be automatically pushed to this r
 
 Your project is live at:
 
-**[https://vercel.com/steckismantas0-gmailcoms-projects/v0-zen-type](https://vercel.com/steckismantas0-gmailcoms-projects/v0-zen-type)**
+**https://zentype-v1--solotype-23c1f.europe-west4.hosted.app/**
 
-## Build your app
+## About ZenType
 
-Continue building your app on:
+ZenType is a modern, AI-powered typing platform focused on calm, distraction-free practice, inspired by apps like Monkeytype but designed with a stronger emphasis on GDPR-friendly data controls and clear privacy choices.
 
-**[https://v0.app/chat/projects/s2qmeRrWrD6](https://v0.app/chat/projects/s2qmeRrWrD6)**
+The production app is hosted on **Firebase App Hosting (europe-west4)** and stays in sync with this repository.
 
-## How It Works
-
-1. Create and modify your project using [v0.app](https://v0.app)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+If you have questions, feedback, or privacy requests, you can reach us at **Zen-type@outlook.com**.

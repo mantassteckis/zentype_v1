@@ -341,7 +341,7 @@ async function handleGET(request: NextRequest) {
         ],
         dataController: {
           name: 'ZenType',
-          contact: 'privacy@zentype.app',
+          contact: 'Zen-type@outlook.com',
         },
         _note: 'Your rights under GDPR',
       };

@@ -57,30 +57,56 @@ type Listener = () => void;
 let listeners: Listener[] = [];
 let currentThemeId = "standard";
 let currentFontId = "fira-code";
+let currentSoundPackId = "disabled";
+let currentSoundVolume = 0.5;
+let currentSoundEnabled = false;
 
 // Initialize from localStorage
 if (typeof window !== 'undefined') {
   currentThemeId = localStorage.getItem('zentype-typing-theme') || "standard";
   currentFontId = localStorage.getItem('zentype-typing-font') || "fira-code";
+  currentSoundPackId = localStorage.getItem('zentype-sound-pack') || "disabled";
+  currentSoundVolume = parseFloat(localStorage.getItem('zentype-sound-volume') || "0.5");
+  currentSoundEnabled = localStorage.getItem('zentype-sound-enabled') === 'true';
 }
 
 // Cache the snapshot to prevent infinite loops (React requirement)
-let cachedSnapshot = { themeId: currentThemeId, fontId: currentFontId };
+let cachedSnapshot = { 
+  themeId: currentThemeId, 
+  fontId: currentFontId,
+  soundPackId: currentSoundPackId,
+  soundVolume: currentSoundVolume,
+  soundEnabled: currentSoundEnabled,
+};
 
 const preferencesStore = {
   subscribe(listener: Listener) {
     listeners.push(listener);
     // Listen for storage events (cross-tab changes)
     const storageListener = (e: StorageEvent) => {
-      if (e.key === 'zentype-typing-theme' || e.key === 'zentype-typing-font') {
+      if (e.key?.startsWith('zentype-')) {
         if (e.key === 'zentype-typing-theme' && e.newValue) {
           currentThemeId = e.newValue;
-          cachedSnapshot = { themeId: currentThemeId, fontId: currentFontId };
         }
         if (e.key === 'zentype-typing-font' && e.newValue) {
           currentFontId = e.newValue;
-          cachedSnapshot = { themeId: currentThemeId, fontId: currentFontId };
         }
+        if (e.key === 'zentype-sound-pack' && e.newValue) {
+          currentSoundPackId = e.newValue;
+        }
+        if (e.key === 'zentype-sound-volume' && e.newValue) {
+          currentSoundVolume = parseFloat(e.newValue);
+        }
+        if (e.key === 'zentype-sound-enabled' && e.newValue) {
+          currentSoundEnabled = e.newValue === 'true';
+        }
+        cachedSnapshot = { 
+          themeId: currentThemeId, 
+          fontId: currentFontId,
+          soundPackId: currentSoundPackId,
+          soundVolume: currentSoundVolume,
+          soundEnabled: currentSoundEnabled,
+        };
         listeners.forEach((l) => l());
       }
     };
@@ -101,13 +127,61 @@ const preferencesStore = {
   setTheme(themeId: string) {
     currentThemeId = themeId;
     localStorage.setItem('zentype-typing-theme', themeId);
-    cachedSnapshot = { themeId: currentThemeId, fontId: currentFontId };
+    cachedSnapshot = { 
+      themeId: currentThemeId, 
+      fontId: currentFontId,
+      soundPackId: currentSoundPackId,
+      soundVolume: currentSoundVolume,
+      soundEnabled: currentSoundEnabled,
+    };
     listeners.forEach((l) => l());
   },
   setFont(fontId: string) {
     currentFontId = fontId;
     localStorage.setItem('zentype-typing-font', fontId);
-    cachedSnapshot = { themeId: currentThemeId, fontId: currentFontId };
+    cachedSnapshot = { 
+      themeId: currentThemeId, 
+      fontId: currentFontId,
+      soundPackId: currentSoundPackId,
+      soundVolume: currentSoundVolume,
+      soundEnabled: currentSoundEnabled,
+    };
+    listeners.forEach((l) => l());
+  },
+  setSoundPack(soundPackId: string) {
+    currentSoundPackId = soundPackId;
+    localStorage.setItem('zentype-sound-pack', soundPackId);
+    cachedSnapshot = { 
+      themeId: currentThemeId, 
+      fontId: currentFontId,
+      soundPackId: currentSoundPackId,
+      soundVolume: currentSoundVolume,
+      soundEnabled: currentSoundEnabled,
+    };
+    listeners.forEach((l) => l());
+  },
+  setSoundVolume(volume: number) {
+    currentSoundVolume = volume;
+    localStorage.setItem('zentype-sound-volume', volume.toString());
+    cachedSnapshot = { 
+      themeId: currentThemeId, 
+      fontId: currentFontId,
+      soundPackId: currentSoundPackId,
+      soundVolume: currentSoundVolume,
+      soundEnabled: currentSoundEnabled,
+    };
+    listeners.forEach((l) => l());
+  },
+  setSoundEnabled(enabled: boolean) {
+    currentSoundEnabled = enabled;
+    localStorage.setItem('zentype-sound-enabled', enabled.toString());
+    cachedSnapshot = { 
+      themeId: currentThemeId, 
+      fontId: currentFontId,
+      soundPackId: currentSoundPackId,
+      soundVolume: currentSoundVolume,
+      soundEnabled: currentSoundEnabled,
+    };
     listeners.forEach((l) => l());
   },
 };
@@ -136,6 +210,19 @@ export const useUserPreferences = () => {
       if (profile.preferredFontId && profile.preferredFontId !== preferences.fontId) {
         preferencesStore.setFont(profile.preferredFontId);
         console.log('Loaded font preference from profile:', profile.preferredFontId);
+      }
+      // Load sound preferences (if they exist in profile)
+      if ((profile as any).soundPackId && (profile as any).soundPackId !== preferences.soundPackId) {
+        preferencesStore.setSoundPack((profile as any).soundPackId);
+        console.log('Loaded sound pack preference from profile:', (profile as any).soundPackId);
+      }
+      if (typeof (profile as any).soundVolume === 'number' && (profile as any).soundVolume !== preferences.soundVolume) {
+        preferencesStore.setSoundVolume((profile as any).soundVolume);
+        console.log('Loaded sound volume preference from profile:', (profile as any).soundVolume);
+      }
+      if (typeof (profile as any).soundEnabled === 'boolean' && (profile as any).soundEnabled !== preferences.soundEnabled) {
+        preferencesStore.setSoundEnabled((profile as any).soundEnabled);
+        console.log('Loaded sound enabled preference from profile:', (profile as any).soundEnabled);
       }
     }
   }, [profile, isLoading]);
@@ -211,6 +298,48 @@ export const useUserPreferences = () => {
     }
   };
 
+  // Set sound pack with Firestore persistence
+  const setSoundPack = async (soundPackId: string) => {
+    preferencesStore.setSoundPack(soundPackId);
+    
+    if (user && profile) {
+      try {
+        await updateUserProfile(user.uid, { soundPackId } as any);
+        console.log('Sound pack preference saved to profile:', soundPackId);
+      } catch (error) {
+        console.error('Error saving sound pack preference:', error);
+      }
+    }
+  };
+
+  // Set sound volume with Firestore persistence
+  const setSoundVolume = async (volume: number) => {
+    preferencesStore.setSoundVolume(volume);
+    
+    if (user && profile) {
+      try {
+        await updateUserProfile(user.uid, { soundVolume: volume } as any);
+        console.log('Sound volume preference saved to profile:', volume);
+      } catch (error) {
+        console.error('Error saving sound volume preference:', error);
+      }
+    }
+  };
+
+  // Set sound enabled with Firestore persistence
+  const setSoundEnabled = async (enabled: boolean) => {
+    preferencesStore.setSoundEnabled(enabled);
+    
+    if (user && profile) {
+      try {
+        await updateUserProfile(user.uid, { soundEnabled: enabled } as any);
+        console.log('Sound enabled preference saved to profile:', enabled);
+      } catch (error) {
+        console.error('Error saving sound enabled preference:', error);
+      }
+    }
+  };
+
   return {
     // Arrays of all available options
     availableThemes: TYPING_THEMES,
@@ -226,6 +355,14 @@ export const useUserPreferences = () => {
     // Setters
     setTheme,
     setFont,
+    setSoundPack,
+    setSoundVolume,
+    setSoundEnabled,
+    
+    // Sound preferences
+    soundPackId: preferences.soundPackId,
+    soundVolume: preferences.soundVolume,
+    soundEnabled: preferences.soundEnabled,
     
     // Loading state
     isLoading,

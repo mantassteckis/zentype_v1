@@ -10,10 +10,11 @@ import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { User, SettingsIcon, AlertTriangle, Trash2, Palette, Type } from "lucide-react"
+import { User, SettingsIcon, AlertTriangle, Trash2, Palette, Type, Volume2 } from "lucide-react"
 import { useAuth } from "@/context/AuthProvider"
 import { updateUserProfile } from "@/lib/firebase/firestore"
 import { useUserPreferences } from "@/hooks/useUserPreferences"
+import { SOUND_PACKS } from "@/hooks/useKeyboardSound"
 import { EmailAuthProvider, reauthenticateWithCredential, GoogleAuthProvider, signInWithPopup, reauthenticateWithPopup } from "firebase/auth"
 import { auth } from "@/lib/firebase/client"
 
@@ -41,6 +42,12 @@ export default function SettingsPage() {
     dynamicTextColor,
     setTheme,
     setFont,
+    soundPackId,
+    soundVolume,
+    soundEnabled,
+    setSoundPack,
+    setSoundVolume,
+    setSoundEnabled,
   } = useUserPreferences()
 
   // Load profile data (non-theme/font preferences)
@@ -331,35 +338,69 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-6">
+              {/* Keyboard Sounds Toggle */}
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <Label htmlFor="keyboard-sounds" className="text-foreground font-medium">
                     Keyboard Sounds
                   </Label>
-                  <p className="text-sm text-muted-foreground">Play sound effects when typing</p>
+                  <p className="text-sm text-muted-foreground">Enable mechanical keyboard sound effects</p>
                 </div>
                 <Switch 
                   id="keyboard-sounds" 
-                  checked={keyboardSounds} 
-                  onCheckedChange={async (checked) => {
-                    setKeyboardSounds(checked)
-                    // Save to user profile if user is logged in
-                    if (user && profile) {
-                      try {
-                        await updateUserProfile(user.uid, { 
-                          settings: { 
-                            ...profile.settings, 
-                            keyboardSounds: checked 
-                          } 
-                        })
-                        console.log("Keyboard sounds preference saved:", checked)
-                      } catch (error) {
-                        console.error("Error saving keyboard sounds preference:", error)
-                      }
-                    }
-                  }} 
+                  checked={soundEnabled} 
+                  onCheckedChange={setSoundEnabled} 
                 />
               </div>
+
+              {/* Sound Pack Selector (only shown when sounds are enabled) */}
+              {soundEnabled && (
+                <div className="space-y-3">
+                  <Label htmlFor="sound-pack" className="text-foreground font-medium">
+                    Sound Pack
+                  </Label>
+                  <Select value={soundPackId} onValueChange={setSoundPack}>
+                    <SelectTrigger id="sound-pack" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SOUND_PACKS.filter(pack => pack.id !== 'disabled').map((pack) => (
+                        <SelectItem key={pack.id} value={pack.id}>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{pack.name}</span>
+                            <span className="text-xs text-muted-foreground">{pack.type} • {pack.description}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Volume Control (only shown when sounds are enabled) */}
+              {soundEnabled && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="sound-volume" className="text-foreground font-medium">
+                      Volume
+                    </Label>
+                    <span className="text-sm text-muted-foreground">{Math.round(soundVolume * 100)}%</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <Volume2 className="h-4 w-4 text-muted-foreground" />
+                    <input
+                      id="sound-volume"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.05"
+                      value={soundVolume}
+                      onChange={(e) => setSoundVolume(parseFloat(e.target.value))}
+                      className="flex-1 h-2 bg-muted rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:border-0"
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
