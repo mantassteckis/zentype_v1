@@ -34,6 +34,23 @@ This directory contains mechanical keyboard sound effects for ZenType's typing t
 - **Description:** Smooth linear switch with deep sound profile.
 - **File:** `novelkeys-cream/keypress.mp3` (2.0KB)
 
+## Error Sound
+
+Each sound pack includes an error sound for incorrect keystrokes:
+- **File:** `[pack-name]/error.wav` (13KB)
+- **Type:** Descending tone (440Hz → 220Hz)
+- **Duration:** 150ms
+- **Description:** A subtle descending beep that provides audio feedback for typing errors without disrupting flow
+- **Generated:** Programmatically created using Node.js WAV generation script
+
+### Error Sound Design
+
+The error sound is designed to be:
+- **Distinctive:** Different from mechanical keyboard sounds to clearly indicate errors
+- **Unobtrusive:** Short duration (150ms) to avoid disrupting typing rhythm
+- **Audible:** Descending tone provides clear negative feedback
+- **Consistent:** Same error sound across all keyboard sound packs
+
 ## Sound Source & License
 
 All sound files are sourced from the [kbsim project](https://github.com/tplai/kbsim) by tplai.
@@ -56,9 +73,22 @@ Sound files are loaded and played using the `use-sound` library in the `useKeybo
 ```typescript
 import useSound from 'use-sound';
 
-const [play] = useSound('/sounds/cherry-mx-blue/keypress.mp3', {
+// Keypress sound for correct typing
+const [playKeypress] = useSound('/sounds/cherry-mx-blue/keypress.mp3', {
   volume: 0.5,
 });
+
+// Error sound for incorrect typing
+const [playError] = useSound('/sounds/cherry-mx-blue/error.wav', {
+  volume: 0.5,
+});
+
+// In typing handler:
+if (isCorrect) {
+  playKeypress();
+} else {
+  playError();
+}
 ```
 
 ## Future Sound Packs

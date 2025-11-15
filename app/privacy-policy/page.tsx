@@ -20,7 +20,7 @@ export default function PrivacyPolicyPage() {
               How we collect, use, and protect your personal data
             </p>
             <p className="text-sm text-muted-foreground">
-              🇪🇺 <span className="font-semibold">GDPR Compliant</span> | Last Updated: November 13, 2025
+              🇪🇺 <span className="font-semibold">GDPR Compliant</span> | Last Updated: November 15, 2025
             </p>
           </div>
 
@@ -37,10 +37,10 @@ export default function PrivacyPolicyPage() {
                 <p className="font-medium text-foreground">Account Settings</p>
                 <p className="text-xs text-muted-foreground">Edit or delete account</p>
               </Link>
-              <a href="mailto:privacy@zentype.app" className="p-4 rounded-lg border border-border hover:border-[#00BFFF] transition-colors">
+              <a href="mailto:Zen-type@outlook.com" className="p-4 rounded-lg border border-border hover:border-[#00BFFF] transition-colors">
                 <Users className="h-6 w-6 text-[#00BFFF] mb-2" />
                 <p className="font-medium text-foreground">Contact Us</p>
-                <p className="text-xs text-muted-foreground">privacy@zentype.app</p>
+                <p className="text-xs text-muted-foreground">Zen-type@outlook.com</p>
               </a>
             </div>
           </GlassCard>
@@ -66,7 +66,7 @@ export default function PrivacyPolicyPage() {
                 <span className="font-semibold text-foreground">Data Controller:</span> ZenType
               </p>
               <p className="text-muted-foreground">
-                <span className="font-semibold text-foreground">Contact:</span> privacy@zentype.app
+                <span className="font-semibold text-foreground">Contact:</span> Zen-type@outlook.com
               </p>
               <p className="text-muted-foreground">
                 <span className="font-semibold text-foreground">Location:</span> European Union (Lithuania)
@@ -183,7 +183,96 @@ export default function PrivacyPolicyPage() {
               <li><span className="font-semibold text-foreground">Leaderboards:</span> Show rankings (with your consent)</li>
               <li><span className="font-semibold text-foreground">Security:</span> Prevent fraud and unauthorized access</li>
               <li><span className="font-semibold text-foreground">Service Improvement:</span> Analyze usage patterns to enhance features</li>
+              <li><span className="font-semibold text-foreground">AI Content Generation:</span> Process your AI prompts through Google Gemini to create custom typing tests</li>
             </ul>
+          </GlassCard>
+
+          {/* AI and Third-Party Processing */}
+          <GlassCard className="space-y-4">
+            <h2 className="text-2xl font-semibold text-foreground">AI Features & Third-Party Data Processing</h2>
+            
+            <div className="space-y-4">
+              <div>
+                <p className="font-medium text-foreground mb-2">Google Gemini AI Integration</p>
+                <p className="text-muted-foreground mb-2">
+                  When you use our AI-powered typing test generator, your requests are processed by <strong>Google Gemini AI</strong> 
+                  through Google Cloud Platform. Here's what happens to your data:
+                </p>
+                <ul className="list-disc list-inside space-y-2 text-muted-foreground pl-4">
+                  <li>Your AI prompts (topics, preferences, settings) are sent to Google's Gemini API</li>
+                  <li>Google processes these requests to generate typing test content</li>
+                  <li>We receive the AI-generated text and store it in our database (Europe-based)</li>
+                  <li><strong>ZenType does not use your AI prompts or generated content for any other purpose</strong></li>
+                </ul>
+              </div>
+
+              <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <p className="font-medium text-amber-400 mb-2">⚠️ Important: Google's AI Data Processing</p>
+                <p className="text-sm text-muted-foreground mb-2">
+                  While ZenType only uses your AI data to provide the Service, <strong>Google may process your AI requests 
+                  according to their own policies</strong>, including:
+                </p>
+                <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground pl-4">
+                  <li>Service improvement and quality control</li>
+                  <li>AI model training and refinement (depending on your Google account settings)</li>
+                  <li>Compliance with their{" "}
+                    <a 
+                      href="https://ai.google.dev/gemini-api/terms" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-[#00BFFF] hover:underline"
+                    >
+                      Gemini API Terms
+                    </a>
+                    {" "}and{" "}
+                    <a 
+                      href="https://policies.google.com/privacy" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-[#00BFFF] hover:underline"
+                    >
+                      Google Privacy Policy
+                    </a>
+                  </li>
+                </ul>
+                <p className="text-sm text-muted-foreground mt-2">
+                  <strong>ZenType is not responsible for how Google processes AI data.</strong> If you have concerns about 
+                  Google's use of your AI prompts, please review their privacy policies or avoid using AI features.
+                </p>
+              </div>
+
+              <div>
+                <p className="font-medium text-foreground mb-2">Firebase Analytics & Google Cloud Services</p>
+                <p className="text-muted-foreground mb-2">
+                  We use Google Firebase and Google Cloud Platform services (analytics, hosting, storage) which means 
+                  Google has access to certain operational and usage data as our service provider. This is governed by:
+                </p>
+                <ul className="list-disc list-inside space-y-2 text-muted-foreground pl-4">
+                  <li>Our Data Processing Agreement (DPA) with Google Cloud</li>
+                  <li>
+                    <a 
+                      href="https://firebase.google.com/support/privacy" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-[#00BFFF] hover:underline"
+                    >
+                      Firebase Privacy and Security policies
+                    </a>
+                  </li>
+                  <li>GDPR-compliant Standard Contractual Clauses (SCCs)</li>
+                </ul>
+              </div>
+
+              <div>
+                <p className="font-medium text-foreground mb-2">What ZenType Does NOT Do</p>
+                <ul className="list-disc list-inside space-y-2 text-muted-foreground pl-4">
+                  <li>❌ We do not train our own AI models on your data</li>
+                  <li>❌ We do not sell your AI prompts or generated content to third parties</li>
+                  <li>❌ We do not share your AI data with anyone other than Google (as the API provider)</li>
+                  <li>❌ We do not use your typing test results or personal data for advertising</li>
+                </ul>
+              </div>
+            </div>
           </GlassCard>
 
           {/* Your Rights */}

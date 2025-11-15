@@ -18,6 +18,8 @@ import { functions } from "@/lib/firebase/client"
 import { useDebugLogger } from "@/context/DebugProvider"
 import { useCorrelationId } from "@/hooks/useCorrelationId"
 import { useUserPreferences } from "@/hooks/useUserPreferences"
+import { useKeyboardSound } from "@/hooks/useKeyboardSound"
+import type { SoundPackId } from "@/hooks/useKeyboardSound"
 // Removed Cloud Function imports - now using Next.js API route
 
 export default function TestPage(): JSX.Element | null {
@@ -39,7 +41,17 @@ export default function TestPage(): JSX.Element | null {
     dynamicTextColor,
     setTheme,
     setFont,
+    soundPackId,
+    soundVolume,
+    soundEnabled,
   } = useUserPreferences();
+  
+  // Keyboard sound system
+  const { playKeypress, playError } = useKeyboardSound({
+    soundPackId: soundPackId as SoundPackId,
+    volume: soundVolume,
+    enabled: soundEnabled,
+  });
   
   // Core state management
   const router = useRouter();
@@ -1062,6 +1074,13 @@ export default function TestPage(): JSX.Element | null {
       const targetChar = textToType[currentIndex];
       const isCorrect = key === targetChar;
       
+      // Play appropriate sound based on correctness (non-blocking)
+      if (isCorrect) {
+        playKeypress();
+      } else {
+        playError();
+      }
+      
       if (!isCorrect) {
         setErrors(prev => prev + 1);
       }
@@ -1082,7 +1101,7 @@ export default function TestPage(): JSX.Element | null {
         setUserInput(prev => prev.slice(0, -1));
       }
     }
-  }, [status, textToType, currentIndex, endTest]);
+  }, [status, textToType, currentIndex, endTest, playKeypress]);
 
   // Pause/Resume toggle
   const togglePause = useCallback(() => {

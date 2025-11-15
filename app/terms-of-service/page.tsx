@@ -20,7 +20,7 @@ export default function TermsOfServicePage() {
               Legal terms governing your use of ZenType
             </p>
             <p className="text-sm text-muted-foreground">
-              Last Updated: November 13, 2025
+              Last Updated: November 15, 2025
             </p>
           </div>
 
@@ -156,9 +156,78 @@ export default function TermsOfServicePage() {
             </div>
           </GlassCard>
 
-          {/* 4. User Conduct */}
+          {/* 4. AI-Generated Content & Third-Party AI Services */}
           <GlassCard className="space-y-4">
-            <h2 className="text-2xl font-semibold text-foreground">4. User Conduct</h2>
+            <h2 className="text-2xl font-semibold text-foreground">4. AI-Generated Content & Third-Party AI Services</h2>
+            <div className="space-y-3 text-muted-foreground">
+              <p className="font-medium text-foreground">Google Gemini AI Integration</p>
+              <p>
+                ZenType offers AI-powered features (such as custom typing test generation) powered by <strong>Google Gemini AI</strong> 
+                through Google Cloud Platform and Firebase services. When you use AI features:
+              </p>
+              <ul className="list-disc list-inside space-y-2 pl-4">
+                <li>Your AI requests (prompts, topics, preferences) are sent to Google's Gemini API for processing</li>
+                <li>Google processes these requests according to their own{" "}
+                  <a 
+                    href="https://ai.google.dev/gemini-api/terms" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-[#00BFFF] hover:underline"
+                  >
+                    Gemini API Terms of Service
+                  </a>
+                  {" "}and{" "}
+                  <a 
+                    href="https://policies.google.com/privacy" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-[#00BFFF] hover:underline"
+                  >
+                    Google Privacy Policy
+                  </a>
+                </li>
+                <li>We store the AI-generated text results in our database to display in your typing tests</li>
+                <li><strong>ZenType does not use your AI requests or generated content for training our own models</strong></li>
+              </ul>
+
+              <p className="font-medium text-foreground mt-4">Google's Use of AI Data</p>
+              <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                <p className="text-sm">
+                  <strong>Important:</strong> While ZenType does not use your AI-generated content for any purpose other than 
+                  providing the Service to you, <strong>Google may process and use your AI requests according to their own policies</strong>. 
+                  As of our last review, Google's Gemini API may use prompts and generated content for service improvement and model training 
+                  unless you are using a paid enterprise tier with specific data processing agreements.
+                </p>
+              </div>
+              <p className="mt-2 text-sm">
+                We have integrated Google Analytics and Firebase services (including AI features) under Google Cloud Platform's 
+                standard terms. <strong>ZenType is not responsible for Google's data processing practices</strong> beyond what is 
+                specified in our Data Processing Agreement with Google. If you have concerns about Google's use of AI data, 
+                please review their policies directly or avoid using AI features.
+              </p>
+
+              <p className="font-medium text-foreground mt-4">Your Responsibilities for AI Content</p>
+              <p>When using AI-powered features, you agree that:</p>
+              <ul className="list-disc list-inside space-y-2 pl-4">
+                <li>You will not use AI features to generate harmful, offensive, illegal, or inappropriate content</li>
+                <li>You will not attempt to manipulate the AI to produce content that violates these Terms</li>
+                <li>You are responsible for reviewing AI-generated content before using it in public tests</li>
+                <li>You will not use AI features to impersonate others or create misleading content</li>
+              </ul>
+
+              <p className="font-medium text-foreground mt-4">Content Moderation Rights</p>
+              <p>
+                We reserve the right to review, moderate, or remove any AI-generated content that violates these Terms or 
+                is flagged by our community. <strong>We may suspend or permanently ban users who repeatedly abuse AI features 
+                or generate inappropriate content</strong>, even if such content was produced by the AI model. You remain 
+                responsible for all content created through your account.
+              </p>
+            </div>
+          </GlassCard>
+
+          {/* 5. User Conduct */}
+          <GlassCard className="space-y-4">
+            <h2 className="text-2xl font-semibold text-foreground">5. User Conduct</h2>
             <div className="space-y-3 text-muted-foreground">
               <p className="font-medium text-foreground">Acceptable Use</p>
               <p>You agree to use the Service only for lawful purposes and in accordance with these Terms. You agree NOT to:</p>
@@ -180,12 +249,30 @@ export default function TermsOfServicePage() {
                 Violation of these conduct rules may result in immediate termination of your account without prior notice. 
                 We reserve the right to take appropriate legal action, including reporting to law enforcement authorities.
               </p>
+
+              <p className="font-medium text-foreground mt-4">Our Right to Moderate and Ban Users</p>
+              <p>
+                <strong>ZenType reserves the absolute right to suspend or permanently ban any user account at our sole discretion</strong> 
+                for behavior that we determine to be:
+              </p>
+              <ul className="list-disc list-inside space-y-2 pl-4">
+                <li>In violation of these Terms of Service or our community standards</li>
+                <li>Harmful, abusive, or disrespectful to other users or our team</li>
+                <li>Attempting to exploit, manipulate, or abuse any feature of the Service</li>
+                <li>Creating inappropriate or offensive content (including via AI features)</li>
+                <li>Repeatedly generating spam or low-quality content</li>
+                <li>Detrimental to the integrity, security, or reputation of ZenType</li>
+              </ul>
+              <p className="mt-2">
+                We are not required to provide warnings before banning users, and banned users may not appeal the decision. 
+                Account bans are permanent and all associated data will be deleted in accordance with GDPR requirements.
+              </p>
             </div>
           </GlassCard>
 
-          {/* 5. Intellectual Property */}
+          {/* 6. Intellectual Property */}
           <GlassCard className="space-y-4">
-            <h2 className="text-2xl font-semibold text-foreground">5. Intellectual Property</h2>
+            <h2 className="text-2xl font-semibold text-foreground">6. Intellectual Property</h2>
             <div className="space-y-3 text-muted-foreground">
               <p className="font-medium text-foreground">Our Intellectual Property</p>
               <p>
@@ -213,9 +300,9 @@ export default function TermsOfServicePage() {
             </div>
           </GlassCard>
 
-          {/* 6. Account Termination */}
+          {/* 7. Account Termination */}
           <GlassCard className="space-y-4">
-            <h2 className="text-2xl font-semibold text-foreground">6. Account Termination</h2>
+            <h2 className="text-2xl font-semibold text-foreground">7. Account Termination</h2>
             <div className="space-y-3 text-muted-foreground">
               <p className="font-medium text-foreground">Termination by You</p>
               <p>
@@ -245,9 +332,9 @@ export default function TermsOfServicePage() {
             </div>
           </GlassCard>
 
-          {/* 7. Disclaimers */}
+          {/* 8. Disclaimers */}
           <GlassCard className="space-y-4">
-            <h2 className="text-2xl font-semibold text-foreground">7. Disclaimers</h2>
+            <h2 className="text-2xl font-semibold text-foreground">8. Disclaimers</h2>
             <div className="space-y-3 text-muted-foreground">
               <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
                 <p className="font-medium text-amber-400 mb-2">⚠️ Important Legal Notice</p>
@@ -268,9 +355,9 @@ export default function TermsOfServicePage() {
             </div>
           </GlassCard>
 
-          {/* 8. Limitation of Liability */}
+          {/* 9. Limitation of Liability */}
           <GlassCard className="space-y-4">
-            <h2 className="text-2xl font-semibold text-foreground">8. Limitation of Liability</h2>
+            <h2 className="text-2xl font-semibold text-foreground">9. Limitation of Liability</h2>
             <div className="space-y-3 text-muted-foreground">
               <p>
                 TO THE FULLEST EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL ZENTYPE, ITS AFFILIATES, OFFICERS, DIRECTORS, 
@@ -296,9 +383,9 @@ export default function TermsOfServicePage() {
             </div>
           </GlassCard>
 
-          {/* 9. Indemnification */}
+          {/* 10. Indemnification */}
           <GlassCard className="space-y-4">
-            <h2 className="text-2xl font-semibold text-foreground">9. Indemnification</h2>
+            <h2 className="text-2xl font-semibold text-foreground">10. Indemnification</h2>
             <div className="space-y-3 text-muted-foreground">
               <p>
                 You agree to defend, indemnify, and hold harmless ZenType, its affiliates, and their respective officers, directors, 
@@ -315,9 +402,9 @@ export default function TermsOfServicePage() {
             </div>
           </GlassCard>
 
-          {/* 10. Changes to Terms */}
+          {/* 11. Changes to Terms */}
           <GlassCard className="space-y-4">
-            <h2 className="text-2xl font-semibold text-foreground">10. Changes to Terms</h2>
+            <h2 className="text-2xl font-semibold text-foreground">11. Changes to Terms</h2>
             <div className="space-y-3 text-muted-foreground">
               <p>
                 We reserve the right to modify or replace these Terms at any time at our sole discretion. We will provide notice 
@@ -340,9 +427,9 @@ export default function TermsOfServicePage() {
             </div>
           </GlassCard>
 
-          {/* 11. Governing Law & Dispute Resolution */}
+          {/* 12. Governing Law & Dispute Resolution */}
           <GlassCard className="space-y-4">
-            <h2 className="text-2xl font-semibold text-foreground">11. Governing Law & Dispute Resolution</h2>
+            <h2 className="text-2xl font-semibold text-foreground">12. Governing Law & Dispute Resolution</h2>
             <div className="space-y-3 text-muted-foreground">
               <p className="font-medium text-foreground">Governing Law</p>
               <p>
@@ -364,15 +451,15 @@ export default function TermsOfServicePage() {
               <p className="font-medium text-foreground mt-4">Dispute Resolution</p>
               <p>
                 In the event of any dispute arising from these Terms or your use of the Service, you agree to first attempt to 
-                resolve the dispute informally by contacting us at legal@zentype.app. If the dispute cannot be resolved informally 
+                resolve the dispute informally by contacting us at Zen-type@outlook.com. If the dispute cannot be resolved informally 
                 within 30 days, either party may pursue formal legal action.
               </p>
             </div>
           </GlassCard>
 
-          {/* 12. Miscellaneous */}
+          {/* 13. Miscellaneous */}
           <GlassCard className="space-y-4">
-            <h2 className="text-2xl font-semibold text-foreground">12. Miscellaneous</h2>
+            <h2 className="text-2xl font-semibold text-foreground">13. Miscellaneous</h2>
             <div className="space-y-3 text-muted-foreground">
               <p className="font-medium text-foreground">Entire Agreement</p>
               <p>
@@ -405,16 +492,16 @@ export default function TermsOfServicePage() {
             </div>
           </GlassCard>
 
-          {/* 13. Contact Information */}
+          {/* 14. Contact Information */}
           <GlassCard className="space-y-4">
-            <h2 className="text-2xl font-semibold text-foreground">13. Contact Information</h2>
+            <h2 className="text-2xl font-semibold text-foreground">14. Contact Information</h2>
             <div className="space-y-3 text-muted-foreground">
               <p>
                 If you have any questions about these Terms of Service, please contact us:
               </p>
               <div className="p-4 rounded-lg border border-border">
-                <p><span className="font-semibold text-foreground">Email:</span> legal@zentype.app</p>
-                <p><span className="font-semibold text-foreground">Privacy Inquiries:</span> privacy@zentype.app</p>
+                <p><span className="font-semibold text-foreground">Email:</span> Zen-type@outlook.com</p>
+                <p><span className="font-semibold text-foreground">Privacy Inquiries:</span> Zen-type@outlook.com</p>
                 <p><span className="font-semibold text-foreground">Location:</span> European Union (Lithuania)</p>
               </div>
             </div>
@@ -432,8 +519,8 @@ export default function TermsOfServicePage() {
               <Link href="/settings/privacy" className="text-[#00BFFF] hover:underline">
                 Privacy Settings
               </Link>
-              <a href="mailto:legal@zentype.app" className="text-[#00BFFF] hover:underline">
-                Contact Legal Team
+              <a href="mailto:Zen-type@outlook.com" className="text-[#00BFFF] hover:underline">
+                Contact ZenType
               </a>
             </div>
           </div>
