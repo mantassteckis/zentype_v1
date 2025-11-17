@@ -24,7 +24,7 @@ import {
   CreditCard
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { auth } from "@/lib/firebase/client"
+import { useAdminAuth } from "@/hooks/useAdminAuth"
 
 interface UserDetailData {
   // Auth data
@@ -83,25 +83,22 @@ interface UserDetailData {
 }
 
 export default function UserDetailPage() {
+  const router = useRouter()
+  const params = useParams()
+  const { user: adminUser, isLoading: authLoading } = useAdminAuth()
+  
   const [userData, setUserData] = useState<UserDetailData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const router = useRouter()
-  const params = useParams()
   const uid = params.uid as string
 
   // Reusable function for fetching user details (called on mount and after operations)
   const fetchUserDetails = async () => {
+    if (!adminUser) return // Wait for auth to be ready
+    
     setIsLoading(true)
     try {
-      const user = auth.currentUser
-      if (!user) {
-        console.warn('[AdminUserDetail] No authenticated user', { uid })
-        router.push('/admin/login')
-        return
-      }
-
-      const idToken = await user.getIdToken()
+      const idToken = await adminUser.getIdToken()
       console.info('[AdminUserDetail] Fetching user details', { uid })
 
       const response = await fetch(`/api/v1/admin/users/${uid}`, {
@@ -142,8 +139,10 @@ export default function UserDetailPage() {
   }
 
   useEffect(() => {
-    fetchUserDetails()
-  }, [uid, router])
+    if (!authLoading && adminUser) {
+      fetchUserDetails()
+    }
+  }, [uid, authLoading, adminUser])
 
   const handleEditProfile = async () => {
     console.info('[AdminUserDetail] Edit profile clicked', { uid })
@@ -159,14 +158,13 @@ export default function UserDetailPage() {
       return
     }
     
+    if (!adminUser) {
+      alert('Not authenticated')
+      return
+    }
+    
     try {
-      const user = auth.currentUser
-      if (!user) {
-        alert('Not authenticated')
-        return
-      }
-      
-      const idToken = await user.getIdToken()
+      const idToken = await adminUser.getIdToken()
       const body: any = {}
       if (newEmail && newEmail !== userData?.email) body.email = newEmail
       if (newDisplayName && newDisplayName !== userData?.displayName) body.displayName = newDisplayName
@@ -216,14 +214,13 @@ export default function UserDetailPage() {
     const confirmed = confirm(`Are you sure you want to promote this user to ${role}? They will need to re-login.`)
     if (!confirmed) return
     
+    if (!adminUser) {
+      alert('Not authenticated')
+      return
+    }
+    
     try {
-      const user = auth.currentUser
-      if (!user) {
-        alert('Not authenticated')
-        return
-      }
-      
-      const idToken = await user.getIdToken()
+      const idToken = await adminUser.getIdToken()
       
       console.info('[AdminUserDetail] Promoting user', { uid, role })
       
@@ -282,14 +279,13 @@ export default function UserDetailPage() {
     const confirmed = confirm(`Update ${role} permissions?\n\n✓ Delete Users: ${deleteUsers}\n✓ Manage Subscriptions: ${manageSubscriptions}\n✓ View Audit Logs: ${viewAuditLogs}\n✓ Manage Settings: ${manageSettings}`)
     if (!confirmed) return
     
+    if (!adminUser) {
+      alert('Not authenticated')
+      return
+    }
+    
     try {
-      const user = auth.currentUser
-      if (!user) {
-        alert('Not authenticated')
-        return
-      }
-      
-      const idToken = await user.getIdToken()
+      const idToken = await adminUser.getIdToken()
       
       console.info('[AdminUserDetail] Updating permissions', { uid, role, permissions: { deleteUsers, manageSubscriptions, viewAuditLogs, manageSettings } })
       
@@ -348,14 +344,13 @@ export default function UserDetailPage() {
     )
     if (!confirmed2) return
     
+    if (!adminUser) {
+      alert('Not authenticated')
+      return
+    }
+    
     try {
-      const user = auth.currentUser
-      if (!user) {
-        alert('Not authenticated')
-        return
-      }
-      
-      const idToken = await user.getIdToken()
+      const idToken = await adminUser.getIdToken()
       
       console.info('[AdminUserDetail] Removing admin role', { uid, currentRole })
       
@@ -399,14 +394,13 @@ export default function UserDetailPage() {
     const confirmed = confirm(`Are you sure you want to ${action} this account?`)
     if (!confirmed) return
     
+    if (!adminUser) {
+      alert('Not authenticated')
+      return
+    }
+    
     try {
-      const user = auth.currentUser
-      if (!user) {
-        alert('Not authenticated')
-        return
-      }
-      
-      const idToken = await user.getIdToken()
+      const idToken = await adminUser.getIdToken()
       
       console.info('[AdminUserDetail] Suspending user', { uid, disabled: !isSuspended, reason })
       
@@ -452,14 +446,13 @@ export default function UserDetailPage() {
       return
     }
     
+    if (!adminUser) {
+      alert('Not authenticated')
+      return
+    }
+    
     try {
-      const user = auth.currentUser
-      if (!user) {
-        alert('Not authenticated')
-        return
-      }
-      
-      const idToken = await user.getIdToken()
+      const idToken = await adminUser.getIdToken()
       
       console.info('[AdminUserDetail] Deleting user account', { uid })
       
@@ -503,14 +496,13 @@ export default function UserDetailPage() {
     const confirmed = confirm(`Change subscription from ${currentTier} to ${newTier}?\n\nThis will ${newTier === 'premium' ? 'give unlimited AI test generation' : 'limit AI tests to 5 per day'}.`)
     if (!confirmed) return
     
+    if (!adminUser) {
+      alert('Not authenticated')
+      return
+    }
+    
     try {
-      const user = auth.currentUser
-      if (!user) {
-        alert('Not authenticated')
-        return
-      }
-      
-      const idToken = await user.getIdToken()
+      const idToken = await adminUser.getIdToken()
       
       console.info('[AdminUserDetail] Updating subscription tier', { uid, newTier })
       
@@ -538,18 +530,22 @@ export default function UserDetailPage() {
     }
   }
 
-  if (isLoading) {
+  if (authLoading || isLoading) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
         <div className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center py-12">
-            <div className="text-muted-foreground">Loading user details...</div>
+            <div className="text-muted-foreground">
+              {authLoading ? 'Verifying admin access...' : 'Loading user details...'}
+            </div>
           </div>
         </div>
       </div>
     )
   }
+  
+  if (!adminUser) return null // Redirecting...
 
   if (error || !userData) {
     return (
