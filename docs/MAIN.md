@@ -1,6 +1,6 @@
 # ZenType Documentation Index - AI Knowledge Base
 
-**Last Updated:** November 13, 2025 (Google OAuth Account Deletion Support Added)  
+**Last Updated:** November 17, 2025 (Admin Panel System Documentation Added)  
 **Purpose:** Central index for all project documentation - use this as entry point for AI assistance  
 **Production URL:** https://zentype-v1--solotype-23c1f.europe-west4.hosted.app/  
 **Old Production URL (Deprecated):** https://zentype-v0--solotype-23c1f.europe-west4.hosted.app/
@@ -18,9 +18,10 @@
 - [5. Deployment & Operations](#5-deployment--operations)
 - [6. Bug Fixes & Issues](#6-bug-fixes--issues)
 - [7. Planning & Specifications](#7-planning--specifications)
-- [8. Privacy & GDPR Compliance](#8-privacy--gdpr-compliance) **← NEW**
-- [9. Account Deletion & User Rights](#9-account-deletion--user-rights) **← NEW**
-- [10. Agent Logs](#10-agent-logs)
+- [8. Privacy & GDPR Compliance](#8-privacy--gdpr-compliance)
+- [9. Account Deletion & User Rights](#9-account-deletion--user-rights)
+- [10. Admin Panel & Subscription Management](#10-admin-panel--subscription-management) **← NEW**
+- [11. Agent Logs](#11-agent-logs)
 - [Recent Changes Log](#recent-changes-log)
 - [Key Project Facts](#key-project-facts-for-ai)
 
@@ -422,7 +423,56 @@ When working on this project:
 
 ---
 
-### **10. Agent Logs**
+### **10. Admin Panel & Subscription Management** **← NEW**
+
+#### `admin-panel/admin-panel.prd.md`
+**Path:** `docs/admin-panel/admin-panel.prd.md`  
+**Purpose:** Comprehensive admin panel product requirements with RBAC and subscription management  
+**Contents:** RBAC system (Firebase custom claims), subscription tiers (Free: 5 AI tests/day, Premium: unlimited), user management dashboard, simple mode architecture, admin audit logging, GDPR compliance checklist, 6-phase implementation plan  
+**Status:** 📝 PLANNING COMPLETE - Ready for Phase 1 implementation  
+**Updated:** November 17, 2025
+
+#### `admin-panel/admin-panel.scope.md`
+**Path:** `docs/admin-panel/admin-panel.scope.md`  
+**Purpose:** Admin panel scope definition and risk analysis  
+**Contents:** New files to create (/app/admin/* routes, /app/api/v1/admin/* APIs, subscription-rate-limiter.ts, admin-middleware.ts), files to modify (firebase-admin.ts, rate-limiter.ts, index.ts), 7 HIGH RISK zones identified, cross-feature dependencies mapped, Firestore indexes, security rules  
+**Status:** 📝 PLANNING COMPLETE  
+**Updated:** November 17, 2025
+
+#### `admin-panel/admin-panel.current.md`
+**Path:** `docs/admin-panel/admin-panel.current.md`  
+**Purpose:** Admin panel implementation status tracking  
+**Contents:** 0% progress tracker across 6 phases (Foundation, User Management, Subscription System, Simple Mode, Audit & Analytics, Testing & Deployment), tasks broken down, sensitive areas documented  
+**Status:** 🔄 NOT STARTED (0% complete)  
+**Updated:** November 17, 2025
+
+#### `admin-panel/admin-panel.errors.md`
+**Path:** `docs/admin-panel/admin-panel.errors.md`  
+**Purpose:** Error tracking for admin panel feature  
+**Contents:** Error history template with preventive measures (ready for implementation phase)  
+**Status:** ✅ READY (no errors yet - planning phase)  
+**Updated:** November 17, 2025
+
+**Key Features:**
+- **RBAC System:** Firebase custom claims (admin, superAdmin, canDeleteUsers, canManageSubscriptions)
+- **Subscription Tiers:**
+  - Free: 5 AI tests per day, unlimited practice tests
+  - Premium: Unlimited AI tests, $3/month or $30/year
+- **Rate Limiting:** Extends existing firebase-functions-rate-limiter with subscription-based logic
+- **Admin Dashboard:**
+  - User list with search, filter, pagination
+  - User detail view with role promotion (Super Admin only)
+  - Subscription management UI
+  - Account deletion (integrates with existing GDPR extension)
+  - User profile editing (email, username changes)
+- **Simple Mode:** Text paste UI for quick test generation (no parameter configuration)
+- **Admin Audit Logging:** Complete trail in adminAuditLog collection (timestamp, adminUserId, action, targetUserId, changes, IP, success)
+- **GDPR Compliance:** Reuses existing Firebase Extension (delete-user-data-gdpr) and data export API
+- **Next Steps:** Begin Phase 1 (Foundation) - Firebase custom claims, admin middleware, admin authentication flow
+
+---
+
+### **11. Agent Logs**
 
 #### `AGENT_LOG.md`
 **Path:** `docs/AGENT_LOG.md`  
@@ -434,7 +484,61 @@ When working on this project:
 
 ## 🔄 **Recent Changes Log**
 
-### November 13, 2025 (Latest - UX Improvements: Legal Links & Password Visibility ✅)
+### November 17, 2025 (Latest - Admin Panel System Documentation ✅)
+
+- 📝 **Admin Panel IKB Documentation Structure Created**
+  - **Purpose**: Comprehensive documentation for admin panel with RBAC, subscription management, and GDPR compliance
+  - **Research Phase**:
+    - Used Context7 MCP to fetch Firebase Admin SDK custom claims documentation
+    - Analyzed GitHub repositories (codelitdev/firebase-admin-dashboard, irfan-za/admin-dashboard)
+    - Studied existing ZenType codebase (FIRESTORE_SCHEMA.md, authentication patterns)
+    - Reviewed existing GDPR compliance infrastructure (Firebase Extension delete-user-data-gdpr)
+  
+  - **Documentation Created**:
+    - `/docs/admin-panel/admin-panel.prd.md` (2,500+ lines)
+      - RBAC system design using Firebase custom claims (admin, superAdmin, canDeleteUsers, canManageSubscriptions)
+      - Subscription tiers (Free: 5 AI tests/day, Premium: unlimited)
+      - User management dashboard specifications
+      - Simple mode architecture (text paste for quick test generation)
+      - Admin audit logging requirements
+      - GDPR compliance checklist
+      - 6-phase implementation plan (Foundation → User Management → Subscription System → Simple Mode → Audit & Analytics → Testing & Deployment)
+    
+    - `/docs/admin-panel/admin-panel.scope.md` (1,800+ lines)
+      - 7 HIGH RISK zones identified (Firebase custom claims, subscription rate limiting, admin audit logging, user account deletion, admin route authorization, subscription collection schema, simple mode text processing)
+      - New files to create: /app/admin/* routes, /app/api/v1/admin/* APIs, subscription-rate-limiter.ts, admin-middleware.ts
+      - Files to modify: firebase-admin.ts, rate-limiter.ts, index.ts
+      - Cross-feature dependencies mapped
+      - Firestore indexes and security rules documented
+    
+    - `/docs/admin-panel/admin-panel.current.md`
+      - 0% implementation status tracker across 6 phases
+      - Tasks broken down with acceptance criteria
+      - Sensitive areas documented (reuses lessons from past ZenType errors)
+    
+    - `/docs/admin-panel/admin-panel.errors.md`
+      - Error tracking template with preventive measures
+      - Based on past ZenType errors (Practice Tests API Fix Oct 26, Account Deletion Nov 13)
+  
+  - **Key Architectural Decisions**:
+    - RBAC: Firebase custom claims (not database roles) for security and performance
+    - Rate Limiting: Extends existing firebase-functions-rate-limiter with subscription-based logic
+    - Admin Auth: Separate admin login flow (email/password only, no OAuth)
+    - Audit Logging: adminAuditLog collection with IP tracking, timestamp, changes
+    - GDPR: Integrates with existing Firebase Extension (delete-user-data-gdpr in europe-west1)
+    - Subscription Schema: Firestore subscriptions collection with tier, aiTestsUsedToday, resetDate
+  
+  - **Files Modified**:
+    - `/docs/MAIN.md` - Added Section 10: Admin Panel & Subscription Management, updated Recent Changes Log, updated Last Updated timestamp
+  
+  - **Status**: ✅ PLANNING COMPLETE - Ready for Phase 1 (Foundation) implementation
+  - **Next Steps**: 
+    - Create TypeScript interface for AdminClaims
+    - Extend /lib/firebase-admin.ts with custom claims functions
+    - Create admin-middleware.ts for route authorization
+    - Implement admin authentication flow
+
+### November 13, 2025 (UX Improvements: Legal Links & Password Visibility ✅)
 
 - 🎨 **Profile Dropdown - Legal Navigation Links**
   - **Problem**: Terms of Service and Privacy Policy not easily accessible from authenticated user interface

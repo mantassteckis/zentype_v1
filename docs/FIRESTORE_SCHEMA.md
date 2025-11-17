@@ -3,9 +3,9 @@
 ## Overview
 This document defines the complete Firestore database schema for the ZenType application. This schema is the **authoritative source** for all collection structures, field types, and data relationships.
 
-**Last Updated**: January 2025  
+**Last Updated**: November 17, 2025  
 **Status**: ✅ Active and Verified  
-**Collections Count**: 8 primary collections
+**Collections Count**: 11 collections (8 existing + 3 admin panel collections)
 
 ---
 
@@ -163,6 +163,136 @@ interface AiTestLimiter {
 
 ---
 
+## 🔐 Admin Panel Collections (Added November 17, 2025)
+
+### 9. `subscriptions` Collection
+**Purpose**: User subscription tiers and AI test rate limiting  
+**Document ID**: User's Firebase Auth UID
+
+```typescript
+interface Subscription {
+  userId: string;               // Firebase Auth UID
+  tier: 'free' | 'premium';    // Subscription tier
+  status: 'active' | 'cancelled' | 'expired' | 'trial';  // Subscription status
+  
+  // AI Test Rate Limiting (Daily)
+  aiTestsUsedToday: number;    // Number of AI tests used today (resets daily)
+  aiTestDailyLimit: number;    // Daily limit (5 for free, -1 for premium = unlimited)
+  aiTestResetDate: string;     // ISO string - date when counter resets (midnight UTC)
+  
+  // Billing & Payments (Stripe Integration - Phase 3)
+  stripeCustomerId?: string;   // Stripe customer ID
+  stripeSubscriptionId?: string; // Stripe subscription ID
+  stripePriceId?: string;      // Stripe price ID (monthly or yearly plan)
+  
+  // Subscription Dates
+  startDate: string;           // ISO string - when subscription started
+  endDate?: string;            // ISO string - when subscription ends (null for active recurring)
+  cancelledAt?: string;        // ISO string - when user cancelled (still active until endDate)
+  
+  // Timestamps
+  createdAt: string;           // ISO string
+  updatedAt: string;           // ISO string
+}
+```
+
+**Subscription Tiers**:
+- **Free**: 5 AI tests per day, unlimited practice tests
+- **Premium**: Unlimited AI tests, $3/month or $30/year
+
+**Rate Limiting Logic**:
+- On AI test generation: Check `aiTestsUsedToday` against `aiTestDailyLimit`
+- If `aiTestResetDate` < today: Reset `aiTestsUsedToday` to 0, update `aiTestResetDate`
+- Increment `aiTestsUsedToday` after successful generation
+
+### 10. `adminAuditLog` Collection
+**Purpose**: GDPR-compliant audit trail for all admin actions  
+**Document ID**: Auto-generated
+
+```typescript
+interface AdminAuditLogEntry {
+  id: string;                   // Auto-generated document ID
+  timestamp: string;            // ISO string - when action occurred
+  
+  // Who performed the action
+  adminUserId: string;          // Firebase UID of admin user
+  adminEmail: string;           // Email of admin user (for human readability)
+  adminRole: 'admin' | 'superAdmin';  // Admin's role at time of action
+  
+  // What action was performed
+  action: 
+    | 'user_created' 
+    | 'user_updated' 
+    | 'user_deleted' 
+    | 'subscription_created' 
+    | 'subscription_updated' 
+    | 'subscription_cancelled'
+    | 'role_granted' 
+    | 'role_revoked' 
+    | 'ai_test_limit_modified'
+    | 'account_email_changed'
+    | 'account_username_changed'
+    | 'admin_login'
+    | 'admin_logout';
+  
+  // Target of the action (if applicable)
+  targetUserId?: string;        // Firebase UID of affected user
+  targetUserEmail?: string;     // Email of affected user
+  
+  // What changed (structured data)
+  changes?: {
+    field: string;              // e.g., 'subscription.tier', 'user.email'
+    oldValue: string | number | boolean | null; // Previous value
+    newValue: string | number | boolean | null; // New value
+  }[];
+  
+  // Additional context
+  metadata?: {
+    ipAddress?: string;         // IP address of admin (GDPR: legitimate interest for security)
+    userAgent?: string;         // Browser/device info
+    reason?: string;            // Admin-provided reason for action
+  };
+  
+  // Success/Failure
+  success: boolean;             // Whether action succeeded
+  error?: string;               // Error message if action failed
+}
+```
+
+**GDPR Compliance**:
+- Legitimate interest: Security monitoring and accountability
+- Retention: 90 days (configurable)
+- User access: Available via data export API
+- Deletion: Removed during account deletion (Firebase Extension)
+
+### 11. `adminUsers` Collection (Optional - Phase 5)
+**Purpose**: Admin-specific preferences and settings  
+**Document ID**: User's Firebase Auth UID
+
+```typescript
+interface AdminUserSettings {
+  userId: string;               // Firebase Auth UID
+  email: string;                // Admin email
+  
+  // Admin Preferences
+  preferences?: {
+    defaultUserListPageSize?: number; // Default rows per page (10, 25, 50, 100)
+    dashboardLayout?: 'compact' | 'detailed'; // Dashboard view preference
+    notificationsEnabled?: boolean; // Email notifications for critical events
+  };
+  
+  // Timestamps
+  createdAt: string;           // ISO string - when admin role was first granted
+  lastLoginAt?: string;        // ISO string - last admin login
+  updatedAt: string;           // ISO string
+}
+```
+
+**Note**: Admin roles are managed via Firebase Custom Claims (not stored in this collection).  
+This collection only stores admin-specific UI preferences.
+
+---
+
 ## API Integration
 
 ### Primary Endpoints
@@ -200,6 +330,23 @@ service cloud.firestore {
     match /testResults/{resultId} {
       allow read, write: if request.auth != null && 
         resource.data.userId == request.auth.uid;
+    }
+    
+    // Admin Panel Collections (Added November 17, 2025)
+    // Users can read their own subscription data
+    match /subscriptions/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if false; // Only server-side writes (admin actions)
+    }
+    
+    // Audit log is admin-only (read via admin API)
+    match /adminAuditLog/{logId} {
+      allow read, write: if false; // Only server-side access (Firebase Admin SDK)
+    }
+    
+    // Admin user settings (admin-only)
+    match /adminUsers/{userId} {
+      allow read, write: if false; // Only server-side access (Firebase Admin SDK)
     }
     
     // Additional rules for other collections...
