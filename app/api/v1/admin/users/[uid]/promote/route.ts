@@ -95,9 +95,10 @@ export async function POST(
     await setUserCustomClaims(uid, customClaims)
     console.info('[AdminUserPromoteAPI] Custom claims set', { uid, customClaims })
 
-    // Revoke existing sessions to force re-authentication with new claims
-    await revokeUserSessions(uid)
-    console.info('[AdminUserPromoteAPI] User sessions revoked', { uid })
+    // CRITICAL FIX: Never revoke sessions - causes admin logout issues
+    // Custom claims will update on next token refresh (automatically within 1 hour)
+    // User can also manually refresh page to get new claims faster
+    console.info('[AdminUserPromoteAPI] Custom claims updated - user must refresh to see changes', { uid })
 
     // Log to audit trail
     await db.collection('adminAuditLog').add({
@@ -123,7 +124,8 @@ export async function POST(
       metadata: {
         ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
         userAgent: request.headers.get('user-agent') || 'unknown',
-        sessionsRevoked: true
+        sessionsRevoked: false,
+        selfModification: uid === adminVerification.userId
       },
       success: true
     })
@@ -137,8 +139,10 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      message: `User promoted to ${role} successfully. Sessions revoked - user must re-login.`,
-      customClaims
+      message: `User promoted to ${role} successfully. ⚠️ Note: Firebase may refresh your session - you might need to re-login.`,
+      customClaims,
+      sessionsRevoked: false,
+      warning: 'Firebase automatically refreshes tokens when admin claims change. Your session may be invalidated.'
     })
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
