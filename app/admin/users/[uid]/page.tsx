@@ -320,6 +320,61 @@ export default function UserDetailPage() {
     }
   }
 
+  const handleRemoveAdminRole = async () => {
+    console.info('[AdminUserDetail] Remove admin role clicked', { uid })
+    
+    const currentRole = userData?.customClaims.superAdmin ? 'Super Admin' : 'Admin'
+    
+    const confirmed1 = confirm(
+      `⚠️ WARNING: This will remove ALL admin privileges from this user.\n\n` +
+      `Current Role: ${currentRole}\n` +
+      `New Role: Regular User\n\n` +
+      `The user will lose access to:\n` +
+      `• Admin dashboard\n` +
+      `• User management\n` +
+      `• Subscription management\n` +
+      `• All admin features\n\n` +
+      `Are you sure you want to continue?`
+    )
+    if (!confirmed1) return
+    
+    const confirmed2 = confirm(
+      `Final confirmation: This user will become a regular user and must be re-promoted if needed later. Continue?`
+    )
+    if (!confirmed2) return
+    
+    try {
+      const user = auth.currentUser
+      if (!user) {
+        alert('Not authenticated')
+        return
+      }
+      
+      const idToken = await user.getIdToken()
+      
+      console.info('[AdminUserDetail] Removing admin role', { uid, currentRole })
+      
+      const response = await fetch(`/api/v1/admin/users/${uid}/promote`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${idToken}`
+        }
+      })
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        alert(result.message)
+        window.location.reload()
+      } else {
+        alert(`Failed to remove admin role: ${result.message}`)
+      }
+    } catch (error) {
+      console.error('[AdminUserDetail] Error removing admin role', { error })
+      alert('Error removing admin role')
+    }
+  }
+
   const handleSuspendAccount = async () => {
     console.info('[AdminUserDetail] Suspend account clicked', { uid })
     
@@ -627,10 +682,16 @@ export default function UserDetailPage() {
                   Promote to Admin
                 </Button>
               ) : (
-                <Button onClick={handleEditPermissions} variant="outline" size="sm" className="border-orange-500 text-orange-500">
-                  <Shield className="w-4 h-4 mr-2" />
-                  Edit Permissions
-                </Button>
+                <>
+                  <Button onClick={handleEditPermissions} variant="outline" size="sm" className="border-orange-500 text-orange-500">
+                    <Shield className="w-4 h-4 mr-2" />
+                    Edit Permissions
+                  </Button>
+                  <Button onClick={handleRemoveAdminRole} variant="outline" size="sm" className="border-red-500 text-red-500">
+                    <UserPlus className="w-4 h-4 mr-2 rotate-180" />
+                    Remove Admin Role
+                  </Button>
+                </>
               )}
               <Button 
                 onClick={handleChangeSubscriptionTier}
