@@ -322,6 +322,25 @@ Phase 6: Testing & Deployment [░░░░░░░░░░] 0%   (Not Started
 #### **Git Commit:**
 - `2966d05` - "feat: Implement Simple Mode with Cloud Function backend"
 
+#### **Additional Enhancement (November 17, 2025):**
+- [x] ✅ **Integrated Simple Mode into main test configuration page**
+  - [x] Added Simple Mode as third tab alongside Practice Test and AI-Generated Test
+  - [x] Changed tab grid from 2 columns to 3 columns for better layout
+  - [x] Integrated all Simple Mode UI directly into `/app/test/page.tsx`
+  - [x] Added state management (simpleText, simpleTextError, isGeneratingSimple)
+  - [x] Implemented handleGenerateSimpleTest function with Cloud Function integration
+  - [x] Reused existing subscription status display
+  - [x] Updated "Start Typing" button logic to handle Simple Mode tests
+  - [x] Auto-selects generated test for immediate typing
+  - [x] Tested end-to-end with Playwright MCP:
+    - Entered 327 characters (52 words)
+    - Generated test successfully (testId: pR8xBYXcWPJ1L0qX12CB)
+    - Typing test started correctly with generated text
+    - No regressions to existing Practice/AI tabs
+  - [x] **Result:** Users can now access Simple Mode without leaving the main test page
+  - [x] **UX Improvement:** Eliminates need for separate /test/simple route
+  - [x] Git Commit: `cb00a57` - "feat: Integrate Simple Mode as third tab in main test configuration page"
+
 #### **Lesson Learned:**
 **Lesson 16: Firebase SDK Callable Functions > Raw HTTPS for Cloud Functions**
 - Use `httpsCallable(functions, 'functionName')` instead of raw `fetch()` calls
@@ -329,6 +348,13 @@ Phase 6: Testing & Deployment [░░░░░░░░░░] 0%   (Not Started
 - Error codes are standardized (`functions/resource-exhausted`, `functions/unauthenticated`)
 - Cleaner error handling with structured error objects
 - No need to deploy region-specific URLs - SDK handles routing
+
+**Lesson 17: Tab Integration > Separate Routes for Related Features**
+- Integrating Simple Mode as a tab provides better UX than a separate route
+- Users don't need to navigate away from the test configuration page
+- Reduces code duplication (reuses subscription status, button logic)
+- Maintains consistent UI/UX across all test modes
+- Easier to discover feature (visible as tab option)
 
 ---
 
