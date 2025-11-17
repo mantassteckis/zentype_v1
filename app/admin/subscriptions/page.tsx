@@ -345,7 +345,7 @@ export default function AdminSubscriptionsPage() {
                         <span className="text-muted-foreground">
                           {user.subscription.aiTestsRemaining === 'unlimited'
                             ? ' AI tests'
-                            : ` of ${user.subscription.dailyLimit} today`}
+                            : ` of ${user.subscription.tier === 'free' ? 5 : 50} today`}
                         </span>
                       </div>
                     </div>
