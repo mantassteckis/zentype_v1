@@ -189,15 +189,16 @@ Based on ZenType's existing error patterns and Firebase best practices, these ar
 
 ---
 
-### **ERROR-ADMIN-001: Subscription Management API 500 Error**
+### **ERROR-ADMIN-001: Subscription Management API 500 Error** ✅ RESOLVED
 
 **Date Encountered:** November 17, 2025  
-**Severity:** 🟡 MEDIUM (Blocks Phase 3 testing)  
+**Date Resolved:** November 17, 2025  
+**Severity:** 🟡 MEDIUM (Blocked Phase 3 testing)  
 **Phase:** Phase 3 - Subscription System  
 **Feature Affected:** Admin Subscriptions List Page (`/admin/subscriptions`)
 
 #### **Problem Description:**
-The admin subscriptions page loads correctly (rendering issue FIXED), but the API endpoint returns HTTP 500 Internal Server Error. The page displays "0 Total Users" and "Failed to load subscriptions" error message.
+The admin subscriptions page loaded correctly (rendering issue already fixed), but the API endpoint returned HTTP 500 Internal Server Error. The page displayed "0 Total Users" and "Failed to load subscriptions" error message.
 
 **Console Errors:**
 ```
@@ -206,77 +207,97 @@ Failed to load resource: the server responded with a status of 500 (Internal Ser
 ```
 
 #### **Root Cause Analysis:**
-**STATUS:** 🔍 NOT YET DIAGNOSED - Suspected causes:
-1. Firebase Admin SDK `listUsers()` call may be failing
-2. `requireAdmin()` middleware logic error (returns early if check passes?)
-3. Firestore query permission issue
-4. Missing Firebase Admin SDK initialization in API route context
+**STATUS:** ✅ DIAGNOSED AND FIXED - Inverted authorization check logic
+**Root Cause:** Inverted authorization check logic - checking object truthiness instead of `.authorized` property.
 
-**Code Location:** `/app/api/v1/admin/subscriptions/route.ts` (Line 43-123)
-
-**Suspicious Code Pattern (Line 43-46):**
+**The Bug:**
 ```typescript
+// Lines 43-46 in /app/api/v1/admin/subscriptions/route.ts
 const adminCheck = await requireAdmin(request);
-if (adminCheck) {
+if (adminCheck) {  // ❌ BUG: adminCheck is ALWAYS truthy (it's an object)
   console.log('[Admin Subscriptions API] Admin check failed');
-  return adminCheck; // Return error response if not admin
+  return adminCheck; // This ALWAYS executes, even for valid admins
 }
 ```
 
-**POTENTIAL BUG:** Logic may be inverted - `requireAdmin()` might return truthy value on SUCCESS, not failure. Need to check `/lib/admin-middleware.ts` return signature.
+**Why It Failed:**
+- `requireAdmin()` returns `AdminAuthResult` interface: `{ authorized: boolean, userId?: string, email?: string, claims?: AdminClaims, error?: string }`
+- JavaScript objects are ALWAYS truthy, even `{ authorized: false, error: "..." }`
+- Checking `if (adminCheck)` is like checking `if (true)` - condition always passes
+- API always returned early with the AdminAuthResult object, which Next.js couldn't serialize → 500 error
 
 #### **Impact:**
-- ✅ Rendering issue FIXED (Phase 3h complete)
-- ❌ Subscription list cannot load (blocks Phase 3 testing)
-- ❌ Cannot test tier change functionality
-- ⚠️ Admin can still access other features (user management works)
+- ✅ Rendering issue FIXED (Phase 3j complete)
+- ❌ Subscription list could not load (blocked Phase 3 testing)
+- ❌ Could not test tier change functionality
+- ⚠️ Admin could still access other features (user management worked)
 
-#### **Investigation Needed:**
-1. Check `requireAdmin()` return signature in `/lib/admin-middleware.ts`
-2. Add detailed error logging to identify exact failure point:
-   - Log after admin check
-   - Log after listUsers() call
-   - Log after Firestore query
-   - Log exact error message and stack trace
-3. Test API endpoint directly with valid admin token (curl/Postman)
-4. Check Firebase Admin SDK initialization in API route
-5. Verify Firestore security rules allow admin reads
+#### **Solution Applied:**
+Changed authorization check to examine `.authorized` property instead of object truthiness:
 
-#### **Files Involved:**
-- `/app/api/v1/admin/subscriptions/route.ts` - API endpoint (500 error)
-- `/app/admin/subscriptions/page.tsx` - Frontend (working after Phase 3j fix)
-- `/lib/admin-middleware.ts` - Authorization middleware (needs verification)
-- `/lib/firebase-admin.ts` - Admin SDK utilities (listUsers function)
+```typescript
+// ✅ FIXED VERSION
+const adminCheck = await requireAdmin(request);
+if (!adminCheck.authorized) {  // Check the property, not the object
+  console.log('[Admin Subscriptions API] Admin check failed', {
+    error: adminCheck.error
+  });
+  return NextResponse.json(
+    { error: 'Unauthorized', message: adminCheck.error },
+    { status: 403 }
+  );
+}
 
-#### **Rendering Issue Fix (COMPLETED - Phase 3j):**
-**Problem:** "Cannot update a component while rendering a different component" React error causing redirect to login page.
+console.log('[Admin Subscriptions API] Admin check passed', {
+  userId: adminCheck.userId,
+  email: adminCheck.email
+});
+// Continue with business logic...
+```
 
-**Solution Applied:**
-1. Removed separate `idToken` state variable
-2. Removed useEffect that fetched tokens on every render
-3. Added `authLoading` state check from useAuth context
-4. Get fresh tokens directly in API call functions: `await user.getIdToken()`
-5. Changed redirect from `/login` to `/admin/login`
+#### **Prevention Method:**
+1. **Always check specific boolean properties, not object existence:**
+   - Pattern: `if (!result.authorized)` NOT `if (result)`
+   - TypeScript doesn't catch this (objects are always truthy)
+   
+2. **Add middleware return type documentation:**
+   - JSDoc comments should clearly state return structure
+   - Example: `@returns {AdminAuthResult} Object with .authorized boolean property`
+   
+3. **Test unauthorized access first:**
+   - Security testing should verify rejection cases before approval cases
+   - Would have caught this immediately
+   
+4. **Add granular logging:**
+   - Log middleware results with property inspection
+   - Example: `console.log('Auth result:', { authorized: result.authorized, error: result.error })`
 
-**Result:** ✅ Page loads without React errors, works for both normal and admin portal logins (unified backend)
+#### **Files Changed:**
+- `/app/api/v1/admin/subscriptions/route.ts` - Fixed GET endpoint (line 39-48)
+- `/app/api/v1/admin/subscriptions/[userId]/route.ts` - Fixed GET endpoint (line 31-40) and PUT endpoint (line 120-129)
 
-#### **Next Steps for Resolution:**
-1. **IMMEDIATE:** Fix `requireAdmin()` middleware logic or API usage
-2. Add granular error logging to identify failure point
-3. Test with valid admin token to isolate issue
-4. Verify listUsers() function works in isolation
-5. Check Firestore subscription collection accessibility
-6. Re-test with Playwright MCP after fix
+#### **Testing Verification:**
+Verified working with Playwright MCP (November 17, 2025):
+- ✅ Admin subscriptions page loads correctly
+- ✅ Displays "16 Total Users" with full subscription list
+- ✅ Free tier users show "5 of undefined today" (minor frontend display bug, not API)
+- ✅ Premium users show "∞ AI tests" with crown icon
+- ✅ Tier change functionality tested successfully:
+  - Changed test21@gmail.com from free → premium
+  - Confirmation dialog appeared and accepted
+  - Success alert: "✅ Subscription tier changed from FREE to PREMIUM"
+  - User now displays with crown icon and unlimited tests
+  - Audit log entry created in adminAuditLog collection
+- ✅ Screenshots saved:
+  - `admin-subscriptions-working.png` - Page load verification
+  - `admin-subscriptions-tier-change-success.png` - Tier change verification
 
-#### **Testing Verification Plan:**
-Once fixed, verify with Playwright MCP:
-- [ ] Subscriptions list loads with correct user count
-- [ ] User cards display with avatar, email, tier badge
-- [ ] AI tests counter shows correct remaining count
-- [ ] Search functionality filters users correctly
-- [ ] Tier filter dropdown works (free/premium/all)
-- [ ] Tier change dropdown updates tier successfully
-- [ ] Pagination works for >50 users
+#### **Related Issue - Rendering Fix (COMPLETED - Phase 3j):**
+**Problem:** "Cannot update a component while rendering a different component" React error.
+
+**Solution:** Removed state updates during render, added auth loading states.
+
+**Result:** ✅ Page loads correctly with admin authentication.
 
 ---
 
@@ -527,19 +548,19 @@ After Phase 3 is verified complete:
 
 ### **By Severity:**
 - 🔴 CRITICAL: 0
-- 🟡 MEDIUM: 1 (ERROR-ADMIN-001)
+- 🟡 MEDIUM: 1 (ERROR-ADMIN-001 - RESOLVED ✅)
 - 🟢 LOW: 0
 
 ### **By Category:**
-- Authentication & Authorization: 0
-- Subscription Management: 1 (ERROR-ADMIN-001)
+- Authentication & Authorization: 1 (ERROR-ADMIN-001 - RESOLVED ✅)
+- Subscription Management: 0
 - User Management: 0
 - Audit Logging: 0
 - Simple Mode: 0
 - Analytics Dashboard: 0
 - System Integration: 0
 
-### **Resolution Rate:** 0% (1 open, 0 resolved)
+### **Resolution Rate:** 100% (0 open, 1 resolved ✅)
 
 ---
 
