@@ -356,6 +356,44 @@ Phase 6: Testing & Deployment [░░░░░░░░░░] 0%   (Not Started
 - Maintains consistent UI/UX across all test modes
 - Easier to discover feature (visible as tab option)
 
+**Lesson 18: Redirect Pattern for Backward Compatibility**
+- After integrating Simple Mode as a tab, converted `/test/simple` to redirect page
+- Reduced file size: 294 lines → 37 lines (87% code reduction)
+- Maintains backward compatibility for existing bookmarks/links
+- Uses `router.replace('/test?tab=simple')` for seamless transition
+- Added `useSearchParams` to main test page to read `tab` query parameter
+- Tab initializes based on URL: `?tab=simple` → Simple Mode tab auto-selected
+- Best practice: Keep old URLs functional with redirects instead of breaking them
+- Eliminates code duplication while preserving user experience
+
+### **Refactoring Summary (November 17, 2025):**
+
+**Before Refactoring:**
+- `/app/test/simple/page.tsx`: 294 lines (full Simple Mode implementation)
+- `/app/test/page.tsx`: Simple Mode integrated as tab (duplicate functionality)
+- Issue: Code duplication, two sources of truth
+
+**After Refactoring:**
+- `/app/test/simple/page.tsx`: 37 lines (redirect component only)
+- `/app/test/page.tsx`: Enhanced with URL query parameter support
+- Benefits:
+  - Single source of truth for Simple Mode functionality
+  - Backward compatibility maintained (`/test/simple` still works)
+  - 87% code reduction in standalone page
+  - No breaking changes for users
+  - Clean redirect with loading state UI
+
+**Testing Results (Playwright MCP):**
+- ✅ Navigated to `http://localhost:3000/test/simple`
+- ✅ Redirect page displayed with loading spinner and message
+- ✅ Auto-redirected to `http://localhost:3000/test?tab=simple`
+- ✅ Simple Mode tab automatically selected on load
+- ✅ All Simple Mode functionality working correctly
+- ✅ No console errors
+
+**Commits:**
+- 888cd9f: "refactor: Convert /test/simple to redirect page for backward compatibility"
+
 ---
 
 ## 🎯 **PHASE 5: AUDIT & ANALYTICS** (0% Complete)
