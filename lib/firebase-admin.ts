@@ -246,6 +246,7 @@ export async function getUserWithClaims(userId: string) {
         creationTime: user.metadata.creationTime,
         lastSignInTime: user.metadata.lastSignInTime,
       },
+      providerData: user.providerData, // Phase 7: Authentication provider info
     };
   } catch (error) {
     console.error('[Admin SDK] Failed to get user:', error);

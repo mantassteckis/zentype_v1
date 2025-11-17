@@ -6,23 +6,23 @@ import { FieldValue } from 'firebase-admin/firestore'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ uid: string }> }
+  { params }: { params: { uid: string } }
 ) {
   try {
-    const { uid } = await params
-    
     // Verify admin authorization
     const adminVerification = await requireAdmin(request)
     if (!adminVerification.authorized) {
       console.error('[AdminUserDetailAPI] Unauthorized access attempt', {
         adminUserId: adminVerification.userId,
-        targetUid: uid
+        targetUid: params.uid
       })
       return NextResponse.json(
         { success: false, message: 'Unauthorized: Admin access required' },
         { status: 403 }
       )
     }
+
+    const { uid } = params
 
     console.info('[AdminUserDetailAPI] Fetching user details', {
       adminUserId: adminVerification.userId,
@@ -80,6 +80,9 @@ export async function GET(
       createdAt: authUser.metadata.creationTime || new Date().toISOString(),
       lastSignInTime: authUser.metadata.lastSignInTime || null,
       customClaims: authUser.customClaims || {},
+      
+      // Authentication provider data (NEW for Phase 7)
+      providerData: authUser.providerData || [],
 
       // Profile data (Firestore)
       // Note: Profile uses nested stats object per FIRESTORE_SCHEMA
@@ -131,7 +134,8 @@ export async function GET(
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     console.error('[AdminUserDetailAPI] Error fetching user details', {
-      error: errorMessage
+      error: errorMessage,
+      uid: params.uid
     })
 
     return NextResponse.json(
@@ -152,23 +156,23 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ uid: string }> }
+  { params }: { params: { uid: string } }
 ) {
   try {
-    const { uid } = await params
-    
     // Verify admin authorization
     const adminVerification = await requireAdmin(request)
     if (!adminVerification.authorized) {
       console.error('[AdminUserEditAPI] Unauthorized access attempt', {
         adminUserId: adminVerification.userId,
-        targetUid: uid
+        targetUid: params.uid
       })
       return NextResponse.json(
         { success: false, message: 'Unauthorized: Admin access required' },
         { status: 403 }
       )
     }
+
+    const { uid } = params
     const body = await request.json()
     const { email, displayName, username, bio } = body
 
@@ -300,10 +304,9 @@ export async function PUT(
     })
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    const { uid: errorUid } = await params
     console.error('[AdminUserEditAPI] Error updating user profile', {
       error: errorMessage,
-      uid: errorUid
+      uid: params.uid
     })
 
     // Log failed attempt
@@ -316,7 +319,7 @@ export async function PUT(
           adminEmail: adminVerification.email || 'unknown',
           adminRole: adminVerification.claims?.superAdmin ? 'superAdmin' : 'admin',
           action: 'user_updated',
-          targetUserId: errorUid,
+          targetUserId: params.uid,
           success: false,
           error: errorMessage
         })
