@@ -1,4 +1,8 @@
-# Admin Panel - Current Implementation Status
+# **Last Updated:** November 17, 2025 (22:30 UTC)  
+**Status:** 🔨 ACTIVE DEVELOPMENT (35% Complete)  
+**Current Phase:** Phase 2 - User Management (90% Complete)  
+**Next Action:** Test Phase 2d features with Playwright MCP (Phase 2e)  
+**Estimated Completion:** December 2025 Panel - Current Implementation Status
 
 **Last Updated:** November 17, 2025 (21:45 UTC)  
 **Status:** � ACTIVE DEVELOPMENT (27% Complete)  
@@ -10,11 +14,11 @@
 
 ## 📊 **IMPLEMENTATION PROGRESS**
 
-### **Overall Progress: 27% Complete**
+### **Overall Progress: 35% Complete**
 
 ```
 Phase 1: Foundation           [██████████] 100% ✅ COMPLETE
-Phase 2: User Management      [██████░░░░] 60%  🔨 IN PROGRESS
+Phase 2: User Management      [█████████░] 90%  🔨 IN PROGRESS (Phase 2e testing remaining)
 Phase 3: Subscription System  [░░░░░░░░░░] 0%   (Not Started)
 Phase 4: Simple Mode          [░░░░░░░░░░] 0%   (Not Started)
 Phase 5: Audit & Analytics    [░░░░░░░░░░] 0%   (Not Started)
@@ -147,39 +151,67 @@ Phase 6: Testing & Deployment [░░░░░░░░░░] 0%   (Not Started
   - [x] Updated feature status indicators (green dots for completed features)
 
 #### **Pending Tasks:**
-- [ ] Implement user profile editing API
-  - [ ] Update /app/api/v1/admin/users/[uid]/route.ts (PUT)
-  - [ ] Validate email format
-  - [ ] Validate username uniqueness
-  - [ ] Log changes to audit log
-  - [ ] Test email change propagation
+- [x] ✅ Implement user profile editing API (November 17, 2025)
+  - [x] Updated /app/api/v1/admin/users/[uid]/route.ts (PUT endpoint added)
+  - [x] Email format validation with regex
+  - [x] Username uniqueness check against Firestore
+  - [x] Audit logging with before/after values
+  - [x] Updates both Firebase Auth (email, displayName) and Firestore (username, bio)
+  - [x] Frontend handlers updated with prompt-based editing
   
-- [ ] Implement user profile editing API
-  - [ ] Update /app/api/v1/admin/users/[uid]/route.ts (PUT)
-  - [ ] Validate email format
-  - [ ] Validate username uniqueness
-  - [ ] Log changes to audit log
-  - [ ] Test email change propagation
+- [x] ✅ Implement account suspension API (November 17, 2025)
+  - [x] Created /app/api/v1/admin/users/[uid]/suspend/route.ts (POST endpoint)
+  - [x] Firebase Auth disable/enable via updateUser()
+  - [x] Suspension reason required for suspending accounts
+  - [x] Audit logging with suspension reason
+  - [x] Prevents self-suspension and admin suspension
+  - [x] Frontend handler with confirmation prompts
   
-- [ ] Implement account suspension API
-  - [ ] Add /app/api/v1/admin/users/[uid]/suspend/route.ts
-  - [ ] Implement Firebase Auth disable/enable
-  - [ ] Log suspension to audit log
-  - [ ] Test suspended user cannot login
+- [x] ✅ Implement role promotion API (November 17, 2025 - Super Admin only)
+  - [x] Created /app/api/v1/admin/users/[uid]/promote/route.ts (POST endpoint)
+  - [x] SuperAdmin permission requirement verified
+  - [x] Custom claims set with setUserCustomClaims()
+  - [x] Sessions revoked to force re-login with new permissions
+  - [x] Prevents self-demotion for super admins
+  - [x] Audit logging with role changes
+  - [x] Frontend handler with role selection prompt
   
-- [ ] Implement role promotion API (Super Admin only)
-  - [ ] Create /app/api/v1/admin/users/[uid]/make-admin/route.ts
-  - [ ] Verify requester has superAdmin claim
-  - [ ] Set custom claims on target user
-  - [ ] Log role change to audit log
-  - [ ] Test promoted user can access admin routes
+- [x] ✅ Implement account deletion API (November 17, 2025)
+  - [x] Created /app/api/v1/admin/users/[uid]/delete/route.ts (DELETE endpoint)
+  - [x] Deletes user from Firebase Auth
+  - [x] Deletes Firestore profile document
+  - [x] Batch deletes testResults and subscriptions
+  - [x] Prevents self-deletion and admin deletion
+  - [x] Comprehensive audit logging with deletion count
+  - [x] Frontend handler with double confirmation + "DELETE" text verification
   
-- [ ] Test user management with Playwright MCP
-  - [ ] Test user list pagination
-  - [ ] Test search functionality
+- [ ] Test user management with Playwright MCP (Phase 2e)
   - [ ] Test user profile editing
-  - [ ] Test account suspension
-  - [ ] Test role promotion
+  - [ ] Test account suspension/unsuspension
+  - [ ] Test role promotion (create test user first)
+  - [ ] Test account deletion
+  - [ ] Verify audit log entries created
+
+#### **Files Created (Phase 2d - November 17, 2025 22:30 UTC):**
+
+**API Routes:**
+- `/app/api/v1/admin/users/[uid]/route.ts` - Extended with PUT endpoint for profile editing (email, displayName, username, bio)
+- `/app/api/v1/admin/users/[uid]/promote/route.ts` - POST endpoint for role promotion (admin/superAdmin with custom claims)
+- `/app/api/v1/admin/users/[uid]/suspend/route.ts` - POST endpoint for account suspension/unsuspension
+- `/app/api/v1/admin/users/[uid]/delete/route.ts` - DELETE endpoint for permanent account deletion
+
+**Frontend Updates:**
+- `/app/admin/users/[uid]/page.tsx` - Updated action button handlers with real API calls
+
+**Key Features Implemented:**
+- ✅ Profile editing with validation (email format, username uniqueness)
+- ✅ Role promotion with permission grants (superAdmin requirement)
+- ✅ Account suspension with reason tracking (prevents admin suspension)
+- ✅ Account deletion with cascade (auth + profiles + testResults + subscriptions)
+- ✅ Comprehensive audit logging for all actions (adminAuditLog collection)
+- ✅ Self-protection (prevent self-suspension, self-deletion, self-demotion)
+- ✅ Session revocation for role changes (force re-login)
+- ✅ Frontend confirmation dialogs (double confirmation for deletion)
 
 ---
 
@@ -755,6 +787,199 @@ const enrichedUser = {
 - Provide multiple workaround options
 - Choose approach and document reasoning
 - Add testing blocker to KNOWN ISSUES section
+
+### **Lesson 10: Schema Mismatches Cause Silent Failures (November 17, 2025)**
+**Context:** User detail API showed 0 tests, 0 WPM despite user having 8 tests with 100 WPM  
+**Lesson:** Firestore schema uses nested objects - must read correct field paths:
+- **Wrong:** `profileData.globalRank` → returns undefined
+- **Right:** `profileData.stats.rank` → returns "S", "A", "B" (rank letter)
+- **Wrong:** `profileData.testsCompleted` → returns undefined  
+- **Right:** `profileData.stats.testsCompleted` → returns 8
+- **Wrong:** `profileData.bestWPM` → returns undefined (wrong casing)
+- **Right:** `profileData.bestWpm` → returns 100 (camelCase)
+
+**Root Cause:**
+- FIRESTORE_SCHEMA.md documents nested `stats` object, but API assumed flat structure
+- No runtime errors - just silently returns 0 or undefined
+- TypeScript interfaces didn't catch this (any type from Firestore)
+
+**Solution Applied:**
+```typescript
+// Added fallbacks for both nested and flat structures
+profile: profileData ? {
+  username: profileData.username || profileData.displayName || '',
+  globalRank: profileData.stats?.rank || profileData.globalRank || 999999,
+  testsCompleted: profileData.stats?.testsCompleted || profileData.testsCompleted || 0,
+  bestWPM: profileData.bestWpm || profileData.stats?.avgWpm || 0,
+  averageAccuracy: profileData.stats?.avgAcc || profileData.averageAccuracy || 0
+} : null
+```
+
+**Testing That Revealed This:**
+- Created admin user with script: `node scripts/create-admin-user.js solo@solo.com superAdmin`
+- Logged into admin panel as solo@solo.com
+
+---
+
+### **Lesson 11: Prompt-Based UX for Admin Actions (November 17, 2025)**
+**Context:** Implementing Phase 2d user management APIs (edit, suspend, promote, delete)  
+**Lesson:** Simple prompt/confirm dialogs sufficient for Phase 2d admin actions - no need for complex modals yet
+
+**Why This Works:**
+- ✅ Fast implementation - no modal component library needed
+- ✅ Sufficient for admin-only interfaces (not public-facing)
+- ✅ Clear user intent with confirmation steps
+- ✅ Standard browser UX familiar to admins
+
+**Pattern Used:**
+```typescript
+// Profile editing: Multi-field prompts
+const newEmail = prompt('Enter new email (leave blank to keep current):', currentEmail)
+const newUsername = prompt('Enter new username (leave blank to keep current):', currentUsername)
+
+// Dangerous actions: Double confirmation + text verification
+const confirmed1 = confirm('⚠️ WARNING: This will permanently delete...')
+const confirmed2 = confirm('Final confirmation: Type "DELETE" in next prompt')
+const confirmation = prompt('Type "DELETE" to confirm:')
+if (confirmation !== 'DELETE') { alert('Deletion cancelled'); return }
+```
+
+**When to Upgrade to Modals:**
+- User-facing features (not admin)
+- Complex forms with many fields
+- Rich validation with real-time feedback
+- Better UX polish required
+
+**Files Using This Pattern:**
+- `/app/admin/users/[uid]/page.tsx` - All 4 action handlers (edit, promote, suspend, delete)
+
+---
+
+### **Lesson 12: Prevent Self-Harm with Admin Actions (November 17, 2025)**
+**Context:** Implementing account suspension and deletion APIs  
+**Lesson:** Always prevent admins from performing dangerous actions on themselves
+
+**Critical Checks Implemented:**
+```typescript
+// Prevent self-suspension
+if (uid === adminVerification.userId) {
+  return NextResponse.json({ success: false, message: 'Admins cannot suspend themselves' })
+}
+
+// Prevent self-deletion
+if (uid === adminVerification.userId) {
+  return NextResponse.json({ success: false, message: 'Admins cannot delete themselves' })
+}
+
+// Prevent self-demotion (superAdmin → admin)
+if (uid === adminVerification.userId && role === 'admin' && adminVerification.claims?.superAdmin) {
+  return NextResponse.json({ success: false, message: 'Super Admins cannot demote themselves' })
+}
+```
+
+**Why This Matters:**
+- Prevents accidental account lockout
+- Prevents privilege escalation attacks (demote yourself to avoid audit trail)
+- Requires another admin to perform action (audit trail integrity)
+
+**Additional Protection:**
+- Prevent suspending/deleting other admins (must remove admin role first)
+- Forces intentional two-step process for admin account management
+
+**Files Implementing This:**
+- `/app/api/v1/admin/users/[uid]/suspend/route.ts` - Self-suspension check
+- `/app/api/v1/admin/users/[uid]/delete/route.ts` - Self-deletion check
+- `/app/api/v1/admin/users/[uid]/promote/route.ts` - Self-demotion check
+
+---
+
+### **Lesson 13: Session Revocation for Permission Changes (November 17, 2025)**
+**Context:** Implementing role promotion API - new custom claims not reflecting immediately  
+**Lesson:** Firebase custom claims are cached in user tokens - must revoke sessions to force re-login
+
+**The Problem:**
+- Custom claims set with `setUserCustomClaims(uid, { admin: true })`
+- User still has old token with no admin claim
+- Admin routes deny access because middleware checks token claims
+
+**The Solution:**
+```typescript
+// After setting custom claims
+await setUserCustomClaims(uid, customClaims)
+
+// Force user to re-authenticate with new claims
+await revokeUserSessions(uid)
+console.info('[AdminUserPromoteAPI] User sessions revoked', { uid })
+```
+
+**User Experience:**
+- Admin promotes user to admin role
+- Target user's sessions revoked immediately
+- Target user gets logged out
+- Target user logs back in → receives new token with admin claims
+- Target user can now access admin routes
+
+**Critical for:**
+- Role promotions (user → admin, admin → superAdmin)
+- Role demotions (admin → user)
+- Permission grants/revocations
+- Any custom claim changes
+
+**Files Implementing This:**
+- `/app/api/v1/admin/users/[uid]/promote/route.ts` - Revokes sessions after promotion
+- `/lib/firebase-admin.ts` - revokeUserSessions() utility function
+
+---
+
+### **Lesson 14: Use set() with merge: true for Profile Updates (November 17, 2025)**
+**Context:** PUT endpoint for profile editing failing with 500 error during Playwright testing  
+**Lesson:** Firestore `update()` fails if document doesn't exist - use `set()` with `merge: true` instead
+
+**The Problem:**
+```typescript
+// ❌ This fails if profile document doesn't exist
+await profileRef.update({
+  username: 'new-username',
+  updatedAt: FieldValue.serverTimestamp()
+})
+// Error: "No document to update"
+```
+
+**The Solution:**
+```typescript
+// ✅ This creates document if missing, updates if exists
+await profileRef.set({
+  username: 'new-username',
+  updatedAt: FieldValue.serverTimestamp()
+}, { merge: true })
+```
+
+**Why This Matters:**
+- Users can exist in Firebase Auth without Firestore profile (auth-only accounts)
+- Admin editing should work regardless of profile existence
+- `merge: true` safely handles both scenarios:
+  - If document exists → updates specified fields only
+  - If document missing → creates with specified fields
+
+**When to Use Each:**
+- `update()` → When document MUST exist (error if missing is desired behavior)
+- `set()` → When you want to create document
+- `set(data, { merge: true })` → When you want to upsert (update or insert)
+
+**Files Fixed:**
+- `/app/api/v1/admin/users/[uid]/route.ts` - Changed PUT endpoint to use set() with merge
+
+---
+- Navigated to user list, clicked MM user (8 tests, 100 WPM)
+- User detail showed 0 tests, 0 WPM → Investigation revealed schema mismatch
+- Fixed field paths, reloaded page → Correct stats displayed
+
+**Prevention:**
+- Always consult FIRESTORE_SCHEMA.md before writing Firestore queries
+- Test with real production data (users with existing test results)
+- Add TypeScript interfaces for Firestore documents (not just `any`)
+- Use Firestore emulator with test data during development
+- Never assume flat structure - check for nested objects
 
 ---
 

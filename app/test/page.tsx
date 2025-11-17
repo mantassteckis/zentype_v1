@@ -99,6 +99,13 @@ export default function TestPage(): JSX.Element | null {
   // AI-generated tests state
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiTest, setAiTest] = useState<any>(null); // Generated test object
+  
+  // Subscription status state
+  const [subscriptionStatus, setSubscriptionStatus] = useState<{
+    tier: 'free' | 'premium';
+    aiTestsRemaining: number | 'unlimited';
+    dailyLimit: number | 'unlimited';
+  } | null>(null);
 
   // Client-side mount state to prevent hydration issues
   const [isMounted, setIsMounted] = useState(false);
@@ -129,6 +136,49 @@ export default function TestPage(): JSX.Element | null {
   }, [debugLogger, isMounted, user]);
 
   // Theme and font preferences are now managed by useUserPreferences hook (no local state needed)
+
+  // Fetch subscription status
+  useEffect(() => {
+    const fetchSubscriptionStatus = async () => {
+      if (!user) return;
+      
+      try {
+        const idToken = await user.getIdToken();
+        const response = await fetch('/api/v1/user/subscription', {
+          headers: {
+            'Authorization': `Bearer ${idToken}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setSubscriptionStatus({
+            tier: data.tier,
+            aiTestsRemaining: data.aiTestsRemaining,
+            dailyLimit: data.dailyLimit
+          });
+          
+          console.log('[TestPage] Subscription status loaded', {
+            tier: data.tier,
+            remaining: data.aiTestsRemaining,
+            limit: data.dailyLimit
+          });
+        }
+      } catch (error) {
+        console.error('[TestPage] Failed to fetch subscription status', {
+          error: error instanceof Error ? error.message : String(error)
+        });
+        // Default to free tier on error
+        setSubscriptionStatus({
+          tier: 'free',
+          aiTestsRemaining: 5,
+          dailyLimit: 5
+        });
+      }
+    };
+    
+    fetchSubscriptionStatus();
+  }, [user]);
 
   // Fetch pre-made tests from API
   useEffect(() => {
@@ -604,6 +654,25 @@ export default function TestPage(): JSX.Element | null {
         stateUpdated: true
       });
       
+      // Refresh subscription status to show updated remaining tests
+      if (user && subscriptionStatus?.tier === 'free') {
+        const idToken = await user.getIdToken();
+        const response = await fetch('/api/v1/user/subscription', {
+          headers: { 'Authorization': `Bearer ${idToken}` }
+        });
+        if (response.ok) {
+          const statusData = await response.json();
+          setSubscriptionStatus({
+            tier: statusData.tier,
+            aiTestsRemaining: statusData.aiTestsRemaining,
+            dailyLimit: statusData.dailyLimit
+          });
+          console.log('[TestPage] Subscription status refreshed after generation', {
+            remaining: statusData.aiTestsRemaining
+          });
+        }
+      }
+      
       // Auto-select the AI test for better UX (user doesn't need to click the card)
       console.log('🤖 Auto-selecting the generated AI test');
       setTextToType(generatedTest.text);
@@ -642,9 +711,30 @@ export default function TestPage(): JSX.Element | null {
         errorDetails: error?.details
       });
 
-      // Show user-friendly error message
-      const userMessage = error?.message || 'Unknown error occurred during test generation';
-      alert(`Failed to generate test: ${userMessage}`);
+      // Handle subscription limit error with special messaging
+      if (error?.code === 'functions/resource-exhausted' || error?.message?.includes('Daily AI test limit reached')) {
+        // Refresh subscription status to show 0 remaining
+        if (user) {
+          const idToken = await user.getIdToken();
+          const response = await fetch('/api/v1/user/subscription', {
+            headers: { 'Authorization': `Bearer ${idToken}` }
+          });
+          if (response.ok) {
+            const statusData = await response.json();
+            setSubscriptionStatus({
+              tier: statusData.tier,
+              aiTestsRemaining: statusData.aiTestsRemaining,
+              dailyLimit: statusData.dailyLimit
+            });
+          }
+        }
+        
+        alert('Daily AI test limit reached (5 tests/day for free tier).\n\nUpgrade to Premium for unlimited AI tests!\n\nVisit the Pricing page to learn more.');
+      } else {
+        // Show user-friendly error message for other errors
+        const userMessage = error?.message || 'Unknown error occurred during test generation';
+        alert(`Failed to generate test: ${userMessage}`);
+      }
     } finally {
       setIsGenerating(false);
       debugLogger.addToFlow(flowId, 'info', 'AI generation process cleanup completed', {
@@ -1437,15 +1527,55 @@ export default function TestPage(): JSX.Element | null {
                       />
                     </div>
                     
+                    {/* Subscription Status Display */}
+                    {subscriptionStatus && subscriptionStatus.tier === 'free' && (
+                      <div className="mt-4 p-3 rounded-lg bg-accent border border-border">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Zap className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm text-foreground">
+                              {subscriptionStatus.aiTestsRemaining === 0 ? (
+                                <span className="text-destructive font-semibold">No AI tests remaining today</span>
+                              ) : (
+                                <>
+                                  <span className="font-semibold">{subscriptionStatus.aiTestsRemaining}</span>
+                                  {' '}of {subscriptionStatus.dailyLimit} AI tests remaining today
+                                </>
+                              )}
+                            </span>
+                          </div>
+                          <a 
+                            href="/pricing" 
+                            className="text-sm text-primary hover:underline font-medium"
+                          >
+                            Upgrade to Premium
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {subscriptionStatus && subscriptionStatus.tier === 'premium' && (
+                      <div className="mt-4 p-3 rounded-lg bg-gradient-to-r from-purple-600/10 to-blue-600/10 border border-purple-600/20">
+                        <div className="flex items-center gap-2">
+                          <Zap className="h-4 w-4 text-purple-600" />
+                          <span className="text-sm text-foreground font-medium">
+                            ✨ Premium: Unlimited AI tests
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    
                     {/* AI Generation Section */}
                     {!isGenerating && !aiTest && (
                       <div className="mt-4">
                         <Button
                           onClick={handleGenerateAiTest}
-                          disabled={!topic.trim() || isGenerating}
-                          className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
+                          disabled={!topic.trim() || isGenerating || (subscriptionStatus?.tier === 'free' && subscriptionStatus?.aiTestsRemaining === 0)}
+                          className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {isGenerating ? 'Generating...' : 'Generate Test'}
+                          {isGenerating ? 'Generating...' : 
+                           (subscriptionStatus?.tier === 'free' && subscriptionStatus?.aiTestsRemaining === 0) ? 'Daily Limit Reached' :
+                           'Generate Test'}
                         </Button>
                       </div>
                     )}

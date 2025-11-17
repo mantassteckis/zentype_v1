@@ -1,0 +1,176 @@
+/**
+ * API Route: /api/v1/admin/users/[uid]/delete
+ * Purpose: Permanently delete user account and all associated data
+ * Authorization: Super Admin with canDeleteUsers permission
+ */
+
+import { NextRequest, NextResponse } from 'next/server'
+import { requirePermission } from '@/lib/admin-middleware'
+import { deleteUserAccount, getUserWithClaims, db } from '@/lib/firebase-admin'
+import { FieldValue } from 'firebase-admin/firestore'
+
+/**
+ * DELETE /api/v1/admin/users/[uid]/delete
+ * Permanently delete user account and all associated data
+ * Requires: Super Admin with canDeleteUsers permission
+ */
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { uid: string } }
+) {
+  try {
+    // Verify admin authorization with canDeleteUsers permission
+    const adminVerification = await requirePermission(request, 'canDeleteUsers')
+    if (!adminVerification.authorized) {
+      console.error('[AdminUserDeleteAPI] Unauthorized access attempt', {
+        adminUserId: adminVerification.userId,
+        targetUid: params.uid
+      })
+      return NextResponse.json(
+        { success: false, message: 'Unauthorized: Admin with canDeleteUsers permission required' },
+        { status: 403 }
+      )
+    }
+
+    const { uid } = params
+
+    console.info('[AdminUserDeleteAPI] Initiating user deletion', {
+      adminUserId: adminVerification.userId,
+      targetUid: uid
+    })
+
+    // Get current user data for audit log before deletion
+    const authUser = await getUserWithClaims(uid)
+    if (!authUser) {
+      console.warn('[AdminUserDeleteAPI] User not found', { uid })
+      return NextResponse.json(
+        { success: false, message: 'User not found' },
+        { status: 404 }
+      )
+    }
+
+    // Prevent self-deletion
+    if (uid === adminVerification.userId) {
+      return NextResponse.json(
+        { success: false, message: 'Admins cannot delete themselves' },
+        { status: 400 }
+      )
+    }
+
+    // Prevent deleting other admins
+    if (authUser.customClaims?.admin || authUser.customClaims?.superAdmin) {
+      return NextResponse.json(
+        { success: false, message: 'Cannot delete admin users. Remove admin role first.' },
+        { status: 400 }
+      )
+    }
+
+    // Get profile data for audit log
+    const profileRef = db.collection('profiles').doc(uid)
+    const profileDoc = await profileRef.get()
+    const profileData = profileDoc.exists ? profileDoc.data() : undefined
+
+    // Delete user account (includes Auth + Firestore profile)
+    await deleteUserAccount(uid)
+    console.info('[AdminUserDeleteAPI] User account deleted from Auth and profiles', { uid })
+
+    // Delete associated data from other collections
+    const batch = db.batch()
+
+    // Delete test results
+    const testResults = await db.collection('testResults').where('userId', '==', uid).get()
+    testResults.docs.forEach(doc => batch.delete(doc.ref))
+    console.info('[AdminUserDeleteAPI] Queued test results for deletion', {
+      uid,
+      count: testResults.size
+    })
+
+    // Delete subscriptions
+    const subscriptions = await db.collection('subscriptions').where('userId', '==', uid).get()
+    subscriptions.docs.forEach(doc => batch.delete(doc.ref))
+    console.info('[AdminUserDeleteAPI] Queued subscriptions for deletion', {
+      uid,
+      count: subscriptions.size
+    })
+
+    // Commit batch deletion
+    await batch.commit()
+    console.info('[AdminUserDeleteAPI] Batch deletion committed', { uid })
+
+    // Log to audit trail (must be after user data collection but can be after deletion)
+    await db.collection('adminAuditLog').add({
+      timestamp: FieldValue.serverTimestamp(),
+      adminUserId: adminVerification.userId || 'unknown',
+      adminEmail: adminVerification.email || 'unknown',
+      adminRole: adminVerification.claims?.superAdmin ? 'superAdmin' : 'admin',
+      action: 'user_deleted',
+      targetUserId: uid,
+      targetUserEmail: authUser.email,
+      deletedData: {
+        email: authUser.email,
+        displayName: authUser.displayName || null,
+        username: profileData?.username || null,
+        createdAt: authUser.metadata?.creationTime || null,
+        testResultsCount: testResults.size,
+        subscriptionsCount: subscriptions.size
+      },
+      metadata: {
+        ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+        userAgent: request.headers.get('user-agent') || 'unknown',
+        permanentDeletion: true
+      },
+      success: true
+    })
+
+    console.info('[AdminUserDeleteAPI] User deletion completed successfully', {
+      adminUserId: adminVerification.userId,
+      targetUid: uid,
+      testResultsDeleted: testResults.size,
+      subscriptionsDeleted: subscriptions.size
+    })
+
+    return NextResponse.json({
+      success: true,
+      message: 'User account and all associated data deleted successfully',
+      deletedData: {
+        userId: uid,
+        testResults: testResults.size,
+        subscriptions: subscriptions.size
+      }
+    })
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.error('[AdminUserDeleteAPI] Error deleting user', {
+      error: errorMessage,
+      uid: params.uid
+    })
+
+    // Log failed attempt
+    try {
+      const adminVerification = await requirePermission(request, 'canDeleteUsers')
+      if (adminVerification.authorized) {
+        await db.collection('adminAuditLog').add({
+          timestamp: FieldValue.serverTimestamp(),
+          adminUserId: adminVerification.userId || 'unknown',
+          adminEmail: adminVerification.email || 'unknown',
+          adminRole: adminVerification.claims?.superAdmin ? 'superAdmin' : 'admin',
+          action: 'user_deletion_failed',
+          targetUserId: params.uid,
+          success: false,
+          error: errorMessage
+        })
+      }
+    } catch (auditError) {
+      console.error('[AdminUserDeleteAPI] Failed to log audit entry', { error: auditError })
+    }
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: 'Failed to delete user account',
+        error: errorMessage
+      },
+      { status: 500 }
+    )
+  }
+}

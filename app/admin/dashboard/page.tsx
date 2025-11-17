@@ -238,7 +238,13 @@ export default function AdminDashboardPage() {
                 View usage analytics
               </div>
             </div>
-            <p className="text-xs text-amber-500 mt-4">📋 Phase 3 - Coming Soon</p>
+            <Button 
+              onClick={() => router.push('/admin/subscriptions')}
+              className="w-full mt-4"
+              variant="default"
+            >
+              Manage Subscriptions →
+            </Button>
           </div>
         </div>
 

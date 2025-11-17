@@ -132,28 +132,219 @@ export default function UserDetailPage() {
     fetchUserDetails()
   }, [uid, router])
 
-  const handleEditProfile = () => {
+  const handleEditProfile = async () => {
     console.info('[AdminUserDetail] Edit profile clicked', { uid })
-    // TODO: Phase 2d - Open edit modal
-    alert('Edit profile feature coming in Phase 2d')
+    
+    // Prompt for new values
+    const newEmail = prompt('Enter new email (leave blank to keep current):', userData?.email || '')
+    const newDisplayName = prompt('Enter new display name (leave blank to keep current):', userData?.displayName || '')
+    const newUsername = prompt('Enter new username (leave blank to keep current):', userData?.profile?.username || '')
+    const newBio = prompt('Enter new bio (leave blank to keep current):', userData?.profile?.bio || '')
+    
+    // If all are cancelled/empty, abort
+    if (!newEmail && !newDisplayName && !newUsername && !newBio) {
+      return
+    }
+    
+    try {
+      const user = auth.currentUser
+      if (!user) {
+        alert('Not authenticated')
+        return
+      }
+      
+      const idToken = await user.getIdToken()
+      const body: any = {}
+      if (newEmail && newEmail !== userData?.email) body.email = newEmail
+      if (newDisplayName && newDisplayName !== userData?.displayName) body.displayName = newDisplayName
+      if (newUsername && newUsername !== userData?.profile?.username) body.username = newUsername
+      if (newBio && newBio !== userData?.profile?.bio) body.bio = newBio
+      
+      if (Object.keys(body).length === 0) {
+        alert('No changes made')
+        return
+      }
+      
+      console.info('[AdminUserDetail] Updating profile', { uid, body })
+      
+      const response = await fetch(`/api/v1/admin/users/${uid}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      })
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        alert('Profile updated successfully!')
+        // Refresh user data
+        window.location.reload()
+      } else {
+        alert(`Failed to update profile: ${result.message}`)
+      }
+    } catch (error) {
+      console.error('[AdminUserDetail] Error updating profile', { error })
+      alert('Error updating profile')
+    }
   }
 
-  const handlePromoteToAdmin = () => {
+  const handlePromoteToAdmin = async () => {
     console.info('[AdminUserDetail] Promote to admin clicked', { uid })
-    // TODO: Phase 2d - Promote user
-    alert('Promote to admin feature coming in Phase 2d')
+    
+    const role = prompt('Enter role (admin or superAdmin):', 'admin')
+    if (!role || !['admin', 'superAdmin'].includes(role)) {
+      alert('Invalid role. Must be "admin" or "superAdmin"')
+      return
+    }
+    
+    const confirmed = confirm(`Are you sure you want to promote this user to ${role}? They will need to re-login.`)
+    if (!confirmed) return
+    
+    try {
+      const user = auth.currentUser
+      if (!user) {
+        alert('Not authenticated')
+        return
+      }
+      
+      const idToken = await user.getIdToken()
+      
+      console.info('[AdminUserDetail] Promoting user', { uid, role })
+      
+      const response = await fetch(`/api/v1/admin/users/${uid}/promote`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          role,
+          permissions: {
+            canDeleteUsers: role === 'superAdmin',
+            canManageSubscriptions: true,
+            canViewAuditLogs: role === 'superAdmin',
+            canManageSettings: role === 'superAdmin'
+          }
+        })
+      })
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        alert(`User promoted to ${role}! Sessions revoked - user must re-login.`)
+        window.location.reload()
+      } else {
+        alert(`Failed to promote user: ${result.message}`)
+      }
+    } catch (error) {
+      console.error('[AdminUserDetail] Error promoting user', { error })
+      alert('Error promoting user')
+    }
   }
 
-  const handleSuspendAccount = () => {
+  const handleSuspendAccount = async () => {
     console.info('[AdminUserDetail] Suspend account clicked', { uid })
-    // TODO: Phase 2d - Suspend/unsuspend account
-    alert('Suspend account feature coming in Phase 2d')
+    
+    const isSuspended = userData?.disabled || false
+    const action = isSuspended ? 'unsuspend' : 'suspend'
+    
+    let reason = ''
+    if (!isSuspended) {
+      reason = prompt('Enter suspension reason:', '') || ''
+      if (!reason.trim()) {
+        alert('Suspension reason is required')
+        return
+      }
+    }
+    
+    const confirmed = confirm(`Are you sure you want to ${action} this account?`)
+    if (!confirmed) return
+    
+    try {
+      const user = auth.currentUser
+      if (!user) {
+        alert('Not authenticated')
+        return
+      }
+      
+      const idToken = await user.getIdToken()
+      
+      console.info('[AdminUserDetail] Suspending user', { uid, disabled: !isSuspended, reason })
+      
+      const response = await fetch(`/api/v1/admin/users/${uid}/suspend`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          disabled: !isSuspended,
+          reason
+        })
+      })
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        alert(`Account ${action}ed successfully!`)
+        window.location.reload()
+      } else {
+        alert(`Failed to ${action} account: ${result.message}`)
+      }
+    } catch (error) {
+      console.error('[AdminUserDetail] Error suspending account', { error })
+      alert('Error suspending account')
+    }
   }
 
-  const handleDeleteAccount = () => {
+  const handleDeleteAccount = async () => {
     console.info('[AdminUserDetail] Delete account clicked', { uid })
-    // TODO: Phase 2d - Delete account with confirmation
-    alert('Delete account feature coming in Phase 2d - requires confirmation modal')
+    
+    const confirmed1 = confirm('⚠️ WARNING: This will permanently delete the user account and ALL associated data. This action CANNOT be undone. Are you sure?')
+    if (!confirmed1) return
+    
+    const confirmed2 = confirm('Final confirmation: Type "DELETE" in the next prompt to confirm permanent deletion')
+    if (!confirmed2) return
+    
+    const confirmation = prompt('Type "DELETE" to confirm:')
+    if (confirmation !== 'DELETE') {
+      alert('Deletion cancelled. Confirmation text did not match.')
+      return
+    }
+    
+    try {
+      const user = auth.currentUser
+      if (!user) {
+        alert('Not authenticated')
+        return
+      }
+      
+      const idToken = await user.getIdToken()
+      
+      console.info('[AdminUserDetail] Deleting user account', { uid })
+      
+      const response = await fetch(`/api/v1/admin/users/${uid}/delete`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${idToken}`
+        }
+      })
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        alert('User account deleted permanently!')
+        router.push('/admin/users')
+      } else {
+        alert(`Failed to delete account: ${result.message}`)
+      }
+    } catch (error) {
+      console.error('[AdminUserDetail] Error deleting account', { error })
+      alert('Error deleting account')
+    }
   }
 
   if (isLoading) {

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-middleware'
-import { getUserWithClaims } from '@/lib/firebase-admin'
+import { getUserWithClaims, updateUserEmail } from '@/lib/firebase-admin'
 import { db } from '@/lib/firebase-admin'
+import { FieldValue } from 'firebase-admin/firestore'
 
 export async function GET(
   request: NextRequest,
@@ -138,6 +139,196 @@ export async function GET(
       {
         success: false,
         message: 'Failed to fetch user details',
+        error: errorMessage
+      },
+      { status: 500 }
+    )
+  }
+}
+
+/**
+ * PUT /api/v1/admin/users/[uid]
+ * Update user profile (email, username, displayName, bio)
+ * Requires: Admin role
+ */
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { uid: string } }
+) {
+  try {
+    // Verify admin authorization
+    const adminVerification = await requireAdmin(request)
+    if (!adminVerification.authorized) {
+      console.error('[AdminUserEditAPI] Unauthorized access attempt', {
+        adminUserId: adminVerification.userId,
+        targetUid: params.uid
+      })
+      return NextResponse.json(
+        { success: false, message: 'Unauthorized: Admin access required' },
+        { status: 403 }
+      )
+    }
+
+    const { uid } = params
+    const body = await request.json()
+    const { email, displayName, username, bio } = body
+
+    console.info('[AdminUserEditAPI] Updating user profile', {
+      adminUserId: adminVerification.userId,
+      targetUid: uid,
+      fields: Object.keys(body)
+    })
+
+    // Get current user data for audit log
+    const authUser = await getUserWithClaims(uid)
+    if (!authUser) {
+      console.warn('[AdminUserEditAPI] User not found', { uid })
+      return NextResponse.json(
+        { success: false, message: 'User not found' },
+        { status: 404 }
+      )
+    }
+
+    const profileRef = db.collection('profiles').doc(uid)
+    const profileDoc = await profileRef.get()
+    const currentProfile = profileDoc.exists ? profileDoc.data() : undefined
+
+    const changes: Array<{ field: string; oldValue: any; newValue: any }> = []
+
+    // Update email in Firebase Auth if changed
+    if (email && email !== authUser.email) {
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(email)) {
+        return NextResponse.json(
+          { success: false, message: 'Invalid email format' },
+          { status: 400 }
+        )
+      }
+
+      try {
+        await updateUserEmail(uid, email)
+        changes.push({ field: 'email', oldValue: authUser.email, newValue: email })
+        console.info('[AdminUserEditAPI] Email updated', { uid, oldEmail: authUser.email, newEmail: email })
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        console.error('[AdminUserEditAPI] Failed to update email', { uid, error: errorMessage })
+        return NextResponse.json(
+          { success: false, message: `Failed to update email: ${errorMessage}` },
+          { status: 400 }
+        )
+      }
+    }
+
+    // Update displayName in Firebase Auth if changed
+    if (displayName !== undefined && displayName !== authUser.displayName) {
+      try {
+        const { getAuth } = await import('firebase-admin/auth')
+        await getAuth().updateUser(uid, { displayName })
+        changes.push({ field: 'displayName', oldValue: authUser.displayName, newValue: displayName })
+        console.info('[AdminUserEditAPI] Display name updated', { uid, oldName: authUser.displayName, newName: displayName })
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        console.error('[AdminUserEditAPI] Failed to update display name', { uid, error: errorMessage })
+      }
+    }
+
+    // Update username in Firestore profile if changed
+    if (username !== undefined && username !== currentProfile?.username) {
+      // Check username uniqueness
+      const usernameQuery = await db.collection('profiles')
+        .where('username', '==', username)
+        .limit(1)
+        .get()
+
+      if (!usernameQuery.empty && usernameQuery.docs[0].id !== uid) {
+        return NextResponse.json(
+          { success: false, message: 'Username already taken' },
+          { status: 400 }
+        )
+      }
+
+      changes.push({ field: 'username', oldValue: currentProfile?.username || null, newValue: username })
+    }
+
+    // Update bio in Firestore profile if changed
+    if (bio !== undefined && bio !== currentProfile?.bio) {
+      changes.push({ field: 'bio', oldValue: currentProfile?.bio || null, newValue: bio })
+    }
+
+    // Update Firestore profile if there are changes
+    const profileUpdates: any = {}
+    if (username !== undefined) profileUpdates.username = username
+    if (bio !== undefined) profileUpdates.bio = bio
+    if (displayName !== undefined) profileUpdates.displayName = displayName
+    if (email !== undefined) profileUpdates.email = email
+
+    if (Object.keys(profileUpdates).length > 0) {
+      // Use set with merge to create profile if it doesn't exist
+      await profileRef.set({
+        ...profileUpdates,
+        updatedAt: FieldValue.serverTimestamp()
+      }, { merge: true })
+    }
+
+    // Log to audit trail
+    await db.collection('adminAuditLog').add({
+      timestamp: FieldValue.serverTimestamp(),
+      adminUserId: adminVerification.userId || 'unknown',
+      adminEmail: adminVerification.email || 'unknown',
+      adminRole: adminVerification.claims?.superAdmin ? 'superAdmin' : 'admin',
+      action: 'user_updated',
+      targetUserId: uid,
+      targetUserEmail: authUser.email,
+      changes,
+      metadata: {
+        ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+        userAgent: request.headers.get('user-agent') || 'unknown'
+      },
+      success: true
+    })
+
+    console.info('[AdminUserEditAPI] User profile updated successfully', {
+      adminUserId: adminVerification.userId,
+      targetUid: uid,
+      changesCount: changes.length
+    })
+
+    return NextResponse.json({
+      success: true,
+      message: 'User profile updated successfully',
+      changes
+    })
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.error('[AdminUserEditAPI] Error updating user profile', {
+      error: errorMessage,
+      uid: params.uid
+    })
+
+    // Log failed attempt
+    try {
+      const adminVerification = await requireAdmin(request)
+      if (adminVerification.authorized) {
+        await db.collection('adminAuditLog').add({
+          timestamp: FieldValue.serverTimestamp(),
+          adminUserId: adminVerification.userId || 'unknown',
+          adminEmail: adminVerification.email || 'unknown',
+          adminRole: adminVerification.claims?.superAdmin ? 'superAdmin' : 'admin',
+          action: 'user_updated',
+          targetUserId: params.uid,
+          success: false,
+          error: errorMessage
+        })
+      }
+    } catch (auditError) {
+      console.error('[AdminUserEditAPI] Failed to log audit entry', { error: auditError })
+    }
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: 'Failed to update user profile',
         error: errorMessage
       },
       { status: 500 }
