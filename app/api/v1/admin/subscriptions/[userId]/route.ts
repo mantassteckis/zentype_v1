@@ -11,6 +11,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin-middleware';
 import { getUserWithClaims } from '@/lib/firebase-admin';
 import { db } from '@/lib/firebase-admin';
+import {
+  logAdminAction,
+  AuditActionType,
+  AuditCategory,
+  AuditSeverity,
+  getIpAddress,
+  getUserAgent,
+} from '@/lib/admin-audit-logger';
 
 interface RouteContext {
   params: Promise<{ userId: string }>;
@@ -230,25 +238,29 @@ export async function PUT(
       modifiedBy: adminUserId
     });
     
-    // Log to audit trail
-    await db.collection('adminAuditLog').add({
-      action: 'subscription_tier_change',
-      performedBy: adminUserId,
-      performedByEmail: decodedToken.email,
+    // Log to audit trail with centralized logger
+    await logAdminAction({
+      adminUserId,
+      adminEmail: decodedToken.email || 'unknown',
+      adminRole: decodedToken.superAdmin ? 'superAdmin' : 'admin',
+      actionType: AuditActionType.SUBSCRIPTION_TIER_CHANGED,
+      actionCategory: AuditCategory.SUBSCRIPTION,
+      actionSeverity: AuditSeverity.NOTICE,
+      actionDescription: `Changed subscription tier from ${beforeState.tier} to ${tier}`,
       targetUserId: userId,
-      targetUserEmail: authUser.email,
-      timestamp: now,
-      changes: {
-        field: 'tier',
-        before: beforeState.tier,
-        after: tier
-      },
+      targetUserEmail: authUser.email || undefined,
+      changes: [
+        {
+          field: 'tier',
+          oldValue: beforeState.tier,
+          newValue: tier
+        }
+      ],
       reason: reason || 'Manual tier change by admin',
-      metadata: {
-        component: 'AdminSubscriptionAPI',
-        endpoint: `/api/v1/admin/subscriptions/${userId}`,
-        method: 'PUT'
-      }
+      ipAddress: getIpAddress(request),
+      userAgent: getUserAgent(request),
+      apiEndpoint: request.url,
+      success: true,
     });
     
     console.log('[Admin Subscription API] Audit log entry created', {

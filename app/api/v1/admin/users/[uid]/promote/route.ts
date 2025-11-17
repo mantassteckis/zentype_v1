@@ -13,6 +13,14 @@ import {
   db
 } from '@/lib/firebase-admin'
 import { FieldValue } from 'firebase-admin/firestore'
+import {
+  logAdminAction,
+  AuditActionType,
+  AuditCategory,
+  AuditSeverity,
+  getIpAddress,
+  getUserAgent,
+} from '@/lib/admin-audit-logger'
 
 /**
  * POST /api/v1/admin/users/[uid]/promote
@@ -99,15 +107,17 @@ export async function POST(
     await revokeUserSessions(uid)
     console.info('[AdminUserPromoteAPI] User sessions revoked', { uid })
 
-    // Log to audit trail
-    await db.collection('adminAuditLog').add({
-      timestamp: FieldValue.serverTimestamp(),
+    // Log to audit trail with centralized logger
+    await logAdminAction({
       adminUserId: adminVerification.userId || 'unknown',
       adminEmail: adminVerification.email || 'unknown',
       adminRole: 'superAdmin',
-      action: 'user_promoted',
+      actionType: AuditActionType.ROLE_GRANTED,
+      actionCategory: AuditCategory.PERMISSIONS,
+      actionSeverity: AuditSeverity.CRITICAL,
+      actionDescription: `Promoted user to ${role} role`,
       targetUserId: uid,
-      targetUserEmail: authUser.email,
+      targetUserEmail: authUser.email || undefined,
       changes: [
         {
           field: 'role',
@@ -120,12 +130,10 @@ export async function POST(
           newValue: customClaims
         }
       ],
-      metadata: {
-        ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
-        userAgent: request.headers.get('user-agent') || 'unknown',
-        sessionsRevoked: true
-      },
-      success: true
+      ipAddress: getIpAddress(request),
+      userAgent: getUserAgent(request),
+      apiEndpoint: request.url,
+      success: true,
     })
 
     console.info('[AdminUserPromoteAPI] User promoted successfully', {
@@ -151,15 +159,20 @@ export async function POST(
     try {
       const adminVerification = await requireSuperAdmin(request)
       if (adminVerification.authorized) {
-        await db.collection('adminAuditLog').add({
-          timestamp: FieldValue.serverTimestamp(),
+        await logAdminAction({
           adminUserId: adminVerification.userId || 'unknown',
           adminEmail: adminVerification.email || 'unknown',
           adminRole: 'superAdmin',
-          action: 'user_promoted',
+          actionType: AuditActionType.ROLE_GRANTED,
+          actionCategory: AuditCategory.PERMISSIONS,
+          actionSeverity: AuditSeverity.ERROR,
+          actionDescription: 'Failed to promote user',
           targetUserId: params.uid,
+          ipAddress: getIpAddress(request),
+          userAgent: getUserAgent(request),
+          apiEndpoint: request.url,
           success: false,
-          error: errorMessage
+          error: errorMessage,
         })
       }
     } catch (auditError) {
@@ -226,8 +239,54 @@ export async function DELETE(
       )
     }
 
-    // Prevent self-demotion
-    if (uid === adminVerification.userId) {
+    // SECURITY RULE: Only super admins can change admin/superAdmin roles
+    // Regular admins cannot demote other admins
+    const targetIsAdmin = authUser.customClaims?.admin === true
+    const targetIsSuperAdmin = authUser.customClaims?.superAdmin === true
+    const callerIsSuperAdmin = adminVerification.claims?.superAdmin === true
+
+    if (targetIsAdmin && !callerIsSuperAdmin) {
+      console.warn('[AdminUserDemoteAPI] Unauthorized: Only super admins can demote admins', {
+        adminUserId: adminVerification.userId,
+        targetUid: uid,
+        targetIsAdmin,
+        targetIsSuperAdmin,
+        callerIsSuperAdmin
+      })
+      return NextResponse.json(
+        { success: false, message: 'Only super admins can change admin roles' },
+        { status: 403 }
+      )
+    }
+
+    // SECURITY RULE: Super admin demotion requires either:
+    // 1. Another super admin performing the action
+    // 2. Self-demotion (user demoting themselves)
+    if (targetIsSuperAdmin) {
+      const isSelfDemotion = uid === adminVerification.userId
+      
+      if (!callerIsSuperAdmin && !isSelfDemotion) {
+        console.warn('[AdminUserDemoteAPI] Unauthorized: Super admin demotion requires super admin', {
+          adminUserId: adminVerification.userId,
+          targetUid: uid,
+          isSelfDemotion
+        })
+        return NextResponse.json(
+          { success: false, message: 'Only super admins can demote other super admins' },
+          { status: 403 }
+        )
+      }
+
+      // Allow self-demotion but prevent being the last super admin
+      if (isSelfDemotion) {
+        // TODO: Add check for "last super admin" protection in future
+        console.warn('[AdminUserDemoteAPI] Self-demotion of super admin', { uid })
+      }
+    }
+
+    // Prevent regular self-demotion (non-super-admin demoting themselves)
+    // Super admin self-demotion is allowed above
+    if (uid === adminVerification.userId && !targetIsSuperAdmin) {
       console.warn('[AdminUserDemoteAPI] Attempted self-demotion', { uid })
       return NextResponse.json(
         { success: false, message: 'Admins cannot demote themselves' },
@@ -235,23 +294,25 @@ export async function DELETE(
       )
     }
 
-    // Remove ALL admin custom claims (set to empty object)
-    await setUserCustomClaims(uid, {})
+    // Remove ALL admin custom claims (use removeUnspecified flag)
+    await setUserCustomClaims(uid, {}, true)
     console.info('[AdminUserDemoteAPI] Custom claims removed', { uid })
 
     // Revoke existing sessions to force re-authentication
     await revokeUserSessions(uid)
     console.info('[AdminUserDemoteAPI] User sessions revoked', { uid })
 
-    // Log to audit trail
-    await db.collection('adminAuditLog').add({
-      timestamp: FieldValue.serverTimestamp(),
+    // Log to audit trail with centralized logger
+    await logAdminAction({
       adminUserId: adminVerification.userId || 'unknown',
       adminEmail: adminVerification.email || 'unknown',
       adminRole: 'superAdmin',
-      action: 'user_demoted',
+      actionType: AuditActionType.ROLE_REVOKED,
+      actionCategory: AuditCategory.PERMISSIONS,
+      actionSeverity: AuditSeverity.CRITICAL,
+      actionDescription: 'Revoked admin role - demoted to regular user',
       targetUserId: uid,
-      targetUserEmail: authUser.email,
+      targetUserEmail: authUser.email || undefined,
       changes: [
         {
           field: 'role',
@@ -264,12 +325,10 @@ export async function DELETE(
           newValue: {}
         }
       ],
-      metadata: {
-        ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
-        userAgent: request.headers.get('user-agent') || 'unknown',
-        sessionsRevoked: true
-      },
-      success: true
+      ipAddress: getIpAddress(request),
+      userAgent: getUserAgent(request),
+      apiEndpoint: request.url,
+      success: true,
     })
 
     console.info('[AdminUserDemoteAPI] User demoted successfully', {
@@ -292,15 +351,20 @@ export async function DELETE(
     try {
       const adminVerification = await requireSuperAdmin(request)
       if (adminVerification.authorized) {
-        await db.collection('adminAuditLog').add({
-          timestamp: FieldValue.serverTimestamp(),
+        await logAdminAction({
           adminUserId: adminVerification.userId || 'unknown',
           adminEmail: adminVerification.email || 'unknown',
           adminRole: 'superAdmin',
-          action: 'user_demoted',
+          actionType: AuditActionType.ROLE_REVOKED,
+          actionCategory: AuditCategory.PERMISSIONS,
+          actionSeverity: AuditSeverity.ERROR,
+          actionDescription: 'Failed to demote user',
           targetUserId: params.uid,
+          ipAddress: getIpAddress(request),
+          userAgent: getUserAgent(request),
+          apiEndpoint: request.url,
           success: false,
-          error: errorMessage
+          error: errorMessage,
         })
       }
     } catch (auditError) {

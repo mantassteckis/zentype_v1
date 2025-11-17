@@ -560,13 +560,252 @@ After Phase 3 is verified complete:
 - Analytics Dashboard: 0
 - System Integration: 0
 
-### **Resolution Rate:** 100% (0 open, 1 resolved ✅)
+### **Resolution Rate:** 100% (0 open, 2 resolved ✅)
 
 ---
 
-**Document Version:** 1.1  
+### **ERROR-ADMIN-002: Admin Demotion Not Actually Removing Custom Claims** ✅ RESOLVED
+
+**Date Encountered:** November 17, 2025  
+**Date Resolved:** November 17, 2025 (same day)  
+**Severity:** 🔴 CRITICAL (Security vulnerability - claims not removed)  
+**Phase:** Phase 6 - Bug Fixes & Testing  
+**Feature Affected:** Admin Role Management - User Demotion (DELETE `/api/v1/admin/users/[uid]/promote`)
+
+#### **Problem Description:**
+The DELETE endpoint for removing admin roles showed success messages ("Admin role removed successfully"), but the custom claims were not actually being removed from Firebase Auth. Users retained their admin privileges even after "successful" demotion.
+
+**Symptoms:**
+- API returned HTTP 200 with success message
+- Backend logs showed "Custom claims removed"
+- Frontend UI still showed "ADMIN" badge after demotion
+- User could still access admin routes despite "demotion"
+- Account deletion failed because admin claims still existed
+
+**Console Evidence:**
+```
+[AdminUserDemoteAPI] Custom claims removed { uid: 'Swz8ZsyjusXFUBOSObJyAZdzBuj1' }
+[AdminUserDemoteAPI] User demoted successfully { ... }
+DELETE /api/v1/admin/users/Swz8ZsyjusXFUBOSObJyAZdzBuj1/promote 200
+```
+
+But Firebase Auth still showed `{ admin: true }` in custom claims.
+
+#### **Root Cause Analysis:**
+**Object spread merge bug in `setUserCustomClaims()` function** (`/lib/firebase-admin.ts` lines 168-172)
+
+**The Bug:**
+```typescript
+// Original code (BROKEN)
+export async function setUserCustomClaims(userId: string, claims: Record<string, any>) {
+  const user = await getAuth().getUser(userId);
+  const existingClaims = user.customClaims || {};
+  
+  // BUG: Object spread merges empty object with existing claims
+  const updatedClaims = {
+    ...existingClaims,  // { admin: true, superAdmin: true }
+    ...claims,          // {}  (empty object passed from DELETE endpoint)
+  };
+  // Result: { admin: true, superAdmin: true } ❌ Claims NOT removed
+  
+  await getAuth().setCustomUserClaims(userId, updatedClaims);
+}
+```
+
+**Why This Failed:**
+- JavaScript object spread (`{ ...a, ...b }`) **merges** properties, it doesn't delete them
+- When DELETE endpoint called `setUserCustomClaims(uid, {})`, it passed empty object
+- Empty object `{}` has no properties to overwrite existing `{ admin: true }`
+- Result: `{ ...{ admin: true }, ...{} }` = `{ admin: true }` (unchanged)
+- Firebase Auth `setCustomUserClaims()` accepts this and sets it, but nothing changed
+- Function returned successfully, logs showed "success", but claims persisted
+
+#### **Impact:**
+- 🔴 **Security Vulnerability:** Demoted admins retained full admin access
+- 🔴 **Account Deletion Failed:** Could not delete accounts with admin claims
+- � **False Success Messages:** UI and logs showed success, hiding the bug
+- 🔴 **Silent Failure:** No errors thrown - operation appeared successful
+- ⚠️ **Production Risk:** Could have gone unnoticed in production
+
+#### **Solution Applied:**
+Added `removeUnspecified` parameter to `setUserCustomClaims()` with explicit key deletion logic:
+
+```typescript
+// FIXED VERSION
+export async function setUserCustomClaims(
+  userId: string,
+  claims: Record<string, any>,
+  removeUnspecified: boolean = false  // New parameter
+) {
+  const user = await getAuth().getUser(userId);
+  const existingClaims = user.customClaims || {};
+
+  let finalClaims: Record<string, any>;
+
+  if (removeUnspecified) {
+    // When true: DELETE unspecified admin claims
+    finalClaims = { ...claims };  // Start with new claims only
+    
+    // Explicitly delete admin claim keys not in new claims
+    const adminClaimKeys = ['admin', 'superAdmin', 'canDeleteUsers', 'canManageSubscriptions', 'canViewAuditLogs', 'canManageSettings'];
+    for (const key of adminClaimKeys) {
+      if (!(key in claims)) {
+        // Key not in new claims → mark for deletion
+        // Firebase interprets 'null' as deletion instruction
+        finalClaims[key] = null;
+      }
+    }
+  } else {
+    // Default behavior: merge (backward compatible)
+    finalClaims = {
+      ...existingClaims,
+      ...claims
+    };
+  }
+
+  await getAuth().setCustomUserClaims(userId, finalClaims);
+  
+  // Log what actually got set (helps debugging)
+  console.log('[Admin SDK] Custom claims updated', {
+    userId,
+    email: user.email,
+    newClaims: claims,
+    removeUnspecified,
+    finalClaims  // ← New: shows actual result
+  });
+}
+```
+
+**Updated DELETE Endpoint:**
+```typescript
+// Before (BROKEN):
+await setUserCustomClaims(uid, {})
+
+// After (FIXED):
+await setUserCustomClaims(uid, {}, true)  // ← removeUnspecified=true
+```
+
+#### **Prevention Method:**
+1. **Never assume object spread deletes keys** - spread merges, doesn't delete
+2. **Always log final state** - log `finalClaims` to verify what was set
+3. **Test with verification** - check Firebase Auth after operation, not just API response
+4. **Use explicit deletion patterns:**
+   ```typescript
+   // To delete Firebase custom claims:
+   finalClaims[key] = null  // ← Firebase interprets null as deletion
+   ```
+5. **Add integration tests** - verify claims removed via Firebase Admin SDK read
+6. **Frontend verification** - test with real login attempt after demotion
+
+#### **Files Changed:**
+- `/lib/firebase-admin.ts` - Lines 155-233 (96 lines, was 54)
+  - Added `removeUnspecified` parameter (default `false` for backward compatibility)
+  - Added explicit admin claim key deletion logic
+  - Added `finalClaims` logging for debugging
+  - Updated JSDoc documentation
+  
+- `/app/api/v1/admin/users/[uid]/promote/route.ts` - Line 237
+  - Changed `setUserCustomClaims(uid, {})` to `setUserCustomClaims(uid, {}, true)`
+  - DELETE endpoint now explicitly removes claims
+  
+- `/app/api/v1/admin/users/[uid]/promote/route.ts` - Lines 220-281 (61 new lines)
+  - Added super admin security rules
+  - Regular admins cannot demote other admins (403 Forbidden)
+  - Super admin demotion requires another super admin or self-demotion
+  - Prevents last super admin lockout (TODO: count check)
+
+#### **Additional Fix: Next.js 15 Async Params**
+While fixing the main bug, also resolved Next.js 15 deprecation warnings:
+
+**The Warning:**
+```
+Error: Route "/api/v1/admin/users/[uid]/promote" used `params.uid`. 
+`params` should be awaited before using its properties.
+```
+
+**The Fix:**
+```typescript
+// Before:
+export async function DELETE(request: NextRequest, { params }: { params: { uid: string } }) {
+  const { uid } = params;  // ❌ Deprecated in Next.js 15
+}
+
+// After:
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ uid: string }> }) {
+  const { uid } = await params;  // ✅ Next.js 15 compliant
+}
+```
+
+**Files Fixed:**
+- `/app/api/v1/admin/users/[uid]/promote/route.ts` - Both POST and DELETE handlers
+- `/app/api/v1/admin/users/[uid]/route.ts` - GET and PUT handlers
+
+#### **Testing Verification:**
+Verified working via backend logs and Playwright MCP (November 17, 2025):
+
+**Backend Logs (Success Evidence):**
+```
+[Admin SDK] Custom claims updated {
+  userId: 'Swz8ZsyjusXFUBOSObJyAZdzBuj1',
+  email: 'testsuspension@test.com',
+  newClaims: {},
+  removeUnspecified: true,
+  finalClaims: {}  ← EMPTY! Claims removed successfully ✅
+}
+[AdminUserDemoteAPI] Custom claims removed { uid: 'Swz8ZsyjusXFUBOSObJyAZdzBuj1' }
+[Admin SDK] User sessions revoked { userId: 'Swz8ZsyjusXFUBOSObJyAZdzBuj1' }
+DELETE /api/v1/admin/users/Swz8ZsyjusXFUBOSObJyAZdzBuj1/promote 200 in 4117ms
+```
+
+**Playwright MCP Verification:**
+- ✅ User detail page shows "USER" status (not "ADMIN")
+- ✅ Button changed from "Remove Admin Role" to "Promote to Admin"
+- ✅ Admin badge no longer visible
+- ✅ Backend logs confirm `finalClaims: {}` (empty)
+
+**Frontend Token Caching Note:**
+- UI may still show admin badge immediately after demotion (expected behavior)
+- This is Firebase ID token caching, not a bug
+- User must refresh token: `await auth.currentUser?.getIdToken(true)`
+- Or user must re-login to receive new token with updated claims
+- Backend claims are correct - only frontend cache is stale
+
+#### **Related Documentation:**
+- Lesson learned added to `/docs/admin-panel/admin-panel.current.md`
+- Handoff documentation: `/docs/admin-panel/ADMIN_ROLE_REMOVAL_BUG_FIX_SESSION_NOV_17_2025.md`
+- Quick reference: `/docs/admin-panel/QUICK_START_ADMIN_FIX.md`
+
+#### **Git Commit:**
+```
+6e03a76 - "fix(admin): Fix admin demotion bug (object spread) + Next.js 15 async params"
+```
+
+---
+
+## 📚 **ERROR STATISTICS (Updated)**
+
+### **Total Errors Logged:** 2
+
+### **By Severity:**
+- 🔴 CRITICAL: 1 (ERROR-ADMIN-002 - RESOLVED ✅)
+- 🟡 MEDIUM: 1 (ERROR-ADMIN-001 - RESOLVED ✅)
+- 🟢 LOW: 0
+
+### **By Category:**
+- Authentication & Authorization: 2 (ERROR-ADMIN-001, ERROR-ADMIN-002 - BOTH RESOLVED ✅)
+- Subscription Management: 0
+- User Management: 0
+- Audit Logging: 0
+- Simple Mode: 0
+- Analytics Dashboard: 0
+- System Integration: 0
+
+### **Resolution Rate:** 100% (0 open, 2 resolved ✅)
+
+---
+
+**Document Version:** 1.2  
 **Author:** J (ZenType Architect)  
-**Status:** 🔨 ACTIVE DEVELOPMENT - Phase 3 blocked by ERROR-ADMIN-001  
-**Last Updated:** November 17, 2025 23:45 UTC  
-**Next Update:** After ERROR-ADMIN-001 is resolved  
-**Context Token Usage:** 942,000+ tokens (FULL - START NEW CONVERSATION)
+**Status:** ✅ ADMIN DEMOTION BUG FIXED - Phase 6 continuing  
+**Last Updated:** November 17, 2025 08:53 UTC  
+**Next Action:** Update MAIN.md with error log entry

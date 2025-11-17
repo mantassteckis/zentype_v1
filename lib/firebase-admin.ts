@@ -139,6 +139,7 @@ export async function verifyAdminToken(idToken: string | undefined) {
  * 
  * @param userId - Firebase UID of user to modify
  * @param claims - Custom claims to set (admin, superAdmin, etc.)
+ * @param removeUnspecified - If true, removes all admin claims not in the claims object (default: false)
  * @returns Success boolean
  * 
  * @example
@@ -148,12 +149,16 @@ export async function verifyAdminToken(idToken: string | undefined) {
  * // Grant super admin role
  * await setUserCustomClaims('user123', { admin: true, superAdmin: true });
  * 
- * // Revoke all admin roles
+ * // Revoke all admin roles (MUST set to false explicitly)
  * await setUserCustomClaims('user123', { admin: false, superAdmin: false });
+ * 
+ * // Remove ALL admin claims (use removeUnspecified flag)
+ * await setUserCustomClaims('user123', {}, true);
  */
 export async function setUserCustomClaims(
   userId: string,
-  claims: Partial<AdminClaims>
+  claims: Partial<AdminClaims>,
+  removeUnspecified: boolean = false
 ): Promise<boolean> {
   try {
     if (!app) {
@@ -163,15 +168,49 @@ export async function setUserCustomClaims(
 
     const auth = getAuth(app);
     
-    // Get existing custom claims to preserve other data
+    // Get existing custom claims
     const user = await auth.getUser(userId);
     const existingClaims = user.customClaims || {};
     
-    // Merge with new claims
-    const updatedClaims = {
-      ...existingClaims,
-      ...claims,
-    };
+    let updatedClaims: Record<string, any>;
+    
+    if (removeUnspecified) {
+      // Remove all admin-related claims not in new claims object
+      // This mode explicitly removes undefined claims
+      const allAdminClaimKeys = [
+        'admin',
+        'superAdmin',
+        'canDeleteUsers',
+        'canManageSubscriptions',
+        'canViewAuditLogs',
+        'canManageSettings',
+      ];
+      
+      updatedClaims = { ...existingClaims };
+      
+      // Set all admin claims to false unless explicitly set in new claims
+      allAdminClaimKeys.forEach((key) => {
+        if (claims[key as keyof AdminClaims] !== undefined) {
+          updatedClaims[key] = claims[key as keyof AdminClaims];
+        } else {
+          // Remove claim by deleting the key (Firebase will remove it)
+          delete updatedClaims[key];
+        }
+      });
+    } else {
+      // Standard merge mode: preserve existing claims, override with new values
+      updatedClaims = {
+        ...existingClaims,
+        ...claims,
+      };
+      
+      // Explicitly remove claims set to false or null
+      Object.keys(updatedClaims).forEach((key) => {
+        if (updatedClaims[key] === false || updatedClaims[key] === null) {
+          delete updatedClaims[key];
+        }
+      });
+    }
 
     await auth.setCustomUserClaims(userId, updatedClaims);
     
@@ -179,6 +218,8 @@ export async function setUserCustomClaims(
       userId,
       email: user.email,
       newClaims: claims,
+      removeUnspecified,
+      finalClaims: updatedClaims,
     });
 
     return true;

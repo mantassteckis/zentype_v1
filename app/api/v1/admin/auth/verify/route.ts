@@ -6,6 +6,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin-middleware';
 import { db } from '@/lib/firebase-admin';
+import {
+  logAdminAction,
+  AuditActionType,
+  AuditCategory,
+  AuditSeverity,
+  getIpAddress,
+  getUserAgent,
+} from '@/lib/admin-audit-logger';
 
 /**
  * POST /api/v1/admin/auth/verify
@@ -48,25 +56,22 @@ export async function POST(request: NextRequest) {
       canManageSubscriptions: auth.claims?.canManageSubscriptions || false,
     };
 
-    // Log successful admin login to audit log
+    // Log successful admin login to audit log with centralized logger
     try {
-      if (!db) {
-        console.error('[Admin Auth] Firestore not initialized');
-      } else {
-        await db.collection('adminAuditLog').add({
-          timestamp: new Date().toISOString(),
-          adminUserId: auth.userId,
-          adminEmail: auth.email,
-          adminRole: role,
-          action: 'admin_login',
-          metadata: {
-            ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
-            userAgent: request.headers.get('user-agent') || 'unknown',
-          },
-          success: true,
-        });
-        console.log('[Admin Auth] Login audit logged', { userId: auth.userId });
-      }
+      await logAdminAction({
+        adminUserId: auth.userId || 'unknown',
+        adminEmail: auth.email || 'unknown',
+        adminRole: role,
+        actionType: AuditActionType.ADMIN_LOGIN,
+        actionCategory: AuditCategory.AUTHENTICATION,
+        actionSeverity: AuditSeverity.INFO,
+        actionDescription: 'Admin logged into admin panel',
+        ipAddress: getIpAddress(request),
+        userAgent: getUserAgent(request),
+        apiEndpoint: request.url,
+        success: true,
+      });
+      console.log('[Admin Auth] Login audit logged', { userId: auth.userId });
     } catch (auditError) {
       console.error('[Admin Auth] Failed to log audit entry:', auditError);
       // Don't fail the request if audit logging fails

@@ -9,6 +9,14 @@ import { requirePermission } from '@/lib/admin-middleware'
 import { getUserWithClaims, db } from '@/lib/firebase-admin'
 import { FieldValue } from 'firebase-admin/firestore'
 import { getAuth } from 'firebase-admin/auth'
+import {
+  logAdminAction,
+  AuditActionType,
+  AuditCategory,
+  AuditSeverity,
+  getIpAddress,
+  getUserAgent,
+} from '@/lib/admin-audit-logger'
 
 /**
  * POST /api/v1/admin/users/[uid]/suspend
@@ -117,15 +125,17 @@ export async function POST(
 
     await profileRef.update(suspensionData)
 
-    // Log to audit trail
-    await db.collection('adminAuditLog').add({
-      timestamp: FieldValue.serverTimestamp(),
+    // Log to audit trail with centralized logger
+    await logAdminAction({
       adminUserId: adminVerification.userId || 'unknown',
       adminEmail: adminVerification.email || 'unknown',
       adminRole: adminVerification.claims?.superAdmin ? 'superAdmin' : 'admin',
-      action: disabled ? 'user_suspended' : 'user_unsuspended',
+      actionType: disabled ? AuditActionType.ACCOUNT_SUSPENDED : AuditActionType.ACCOUNT_UNSUSPENDED,
+      actionCategory: AuditCategory.USER_MANAGEMENT,
+      actionSeverity: AuditSeverity.CRITICAL,
+      actionDescription: disabled ? 'Suspended user account' : 'Unsuspended user account',
       targetUserId: uid,
-      targetUserEmail: authUser.email,
+      targetUserEmail: authUser.email || undefined,
       changes: [
         {
           field: 'disabled',
@@ -133,12 +143,11 @@ export async function POST(
           newValue: disabled
         }
       ],
-      metadata: {
-        reason: reason || 'No reason provided',
-        ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
-        userAgent: request.headers.get('user-agent') || 'unknown'
-      },
-      success: true
+      reason: reason || 'No reason provided',
+      ipAddress: getIpAddress(request),
+      userAgent: getUserAgent(request),
+      apiEndpoint: request.url,
+      success: true,
     })
 
     console.info('[AdminUserSuspendAPI] User suspension status updated successfully', {
@@ -165,15 +174,21 @@ export async function POST(
     try {
       const adminVerification = await requirePermission(request, 'canDeleteUsers')
       if (adminVerification.authorized) {
-        await db.collection('adminAuditLog').add({
-          timestamp: FieldValue.serverTimestamp(),
+        const body = await request.json()
+        await logAdminAction({
           adminUserId: adminVerification.userId || 'unknown',
           adminEmail: adminVerification.email || 'unknown',
           adminRole: adminVerification.claims?.superAdmin ? 'superAdmin' : 'admin',
-          action: 'user_suspension_failed',
+          actionType: body.disabled ? AuditActionType.ACCOUNT_SUSPENDED : AuditActionType.ACCOUNT_UNSUSPENDED,
+          actionCategory: AuditCategory.USER_MANAGEMENT,
+          actionSeverity: AuditSeverity.ERROR,
+          actionDescription: 'Failed to update account suspension status',
           targetUserId: params.uid,
+          ipAddress: getIpAddress(request),
+          userAgent: getUserAgent(request),
+          apiEndpoint: request.url,
           success: false,
-          error: errorMessage
+          error: errorMessage,
         })
       }
     } catch (auditError) {

@@ -8,6 +8,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requirePermission } from '@/lib/admin-middleware'
 import { deleteUserAccount, getUserWithClaims, db } from '@/lib/firebase-admin'
 import { FieldValue } from 'firebase-admin/firestore'
+import {
+  logAdminAction,
+  AuditActionType,
+  AuditCategory,
+  AuditSeverity,
+  getIpAddress,
+  getUserAgent,
+} from '@/lib/admin-audit-logger'
 
 /**
  * DELETE /api/v1/admin/users/[uid]/delete
@@ -97,29 +105,33 @@ export async function DELETE(
     await batch.commit()
     console.info('[AdminUserDeleteAPI] Batch deletion committed', { uid })
 
-    // Log to audit trail (must be after user data collection but can be after deletion)
-    await db.collection('adminAuditLog').add({
-      timestamp: FieldValue.serverTimestamp(),
+    // Log to audit trail with centralized logger
+    await logAdminAction({
       adminUserId: adminVerification.userId || 'unknown',
       adminEmail: adminVerification.email || 'unknown',
       adminRole: adminVerification.claims?.superAdmin ? 'superAdmin' : 'admin',
-      action: 'user_deleted',
+      actionType: AuditActionType.USER_ACCOUNT_DELETED,
+      actionCategory: AuditCategory.USER_MANAGEMENT,
+      actionSeverity: AuditSeverity.CRITICAL,
+      actionDescription: `Permanently deleted user account and ${testResults.size} test results, ${subscriptions.size} subscriptions`,
       targetUserId: uid,
-      targetUserEmail: authUser.email,
-      deletedData: {
-        email: authUser.email,
-        displayName: authUser.displayName || null,
-        username: profileData?.username || null,
-        createdAt: authUser.metadata?.creationTime || null,
-        testResultsCount: testResults.size,
-        subscriptionsCount: subscriptions.size
-      },
-      metadata: {
-        ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
-        userAgent: request.headers.get('user-agent') || 'unknown',
-        permanentDeletion: true
-      },
-      success: true
+      targetUserEmail: authUser.email || undefined,
+      changes: [
+        {
+          field: 'account',
+          oldValue: {
+            email: authUser.email,
+            displayName: authUser.displayName || null,
+            username: profileData?.username || null,
+            createdAt: authUser.metadata?.creationTime || null,
+          },
+          newValue: null
+        }
+      ],
+      ipAddress: getIpAddress(request),
+      userAgent: getUserAgent(request),
+      apiEndpoint: request.url,
+      success: true,
     })
 
     console.info('[AdminUserDeleteAPI] User deletion completed successfully', {
@@ -149,15 +161,20 @@ export async function DELETE(
     try {
       const adminVerification = await requirePermission(request, 'canDeleteUsers')
       if (adminVerification.authorized) {
-        await db.collection('adminAuditLog').add({
-          timestamp: FieldValue.serverTimestamp(),
+        await logAdminAction({
           adminUserId: adminVerification.userId || 'unknown',
           adminEmail: adminVerification.email || 'unknown',
           adminRole: adminVerification.claims?.superAdmin ? 'superAdmin' : 'admin',
-          action: 'user_deletion_failed',
+          actionType: AuditActionType.USER_ACCOUNT_DELETED,
+          actionCategory: AuditCategory.USER_MANAGEMENT,
+          actionSeverity: AuditSeverity.ERROR,
+          actionDescription: 'Failed to delete user account',
           targetUserId: params.uid,
+          ipAddress: getIpAddress(request),
+          userAgent: getUserAgent(request),
+          apiEndpoint: request.url,
           success: false,
-          error: errorMessage
+          error: errorMessage,
         })
       }
     } catch (auditError) {

@@ -3,6 +3,14 @@ import { requireAdmin } from '@/lib/admin-middleware'
 import { getUserWithClaims, updateUserEmail } from '@/lib/firebase-admin'
 import { db } from '@/lib/firebase-admin'
 import { FieldValue } from 'firebase-admin/firestore'
+import {
+  logAdminAction,
+  AuditActionType,
+  AuditCategory,
+  AuditSeverity,
+  getIpAddress,
+  getUserAgent,
+} from '@/lib/admin-audit-logger'
 
 export async function GET(
   request: NextRequest,
@@ -274,21 +282,22 @@ export async function PUT(
       }, { merge: true })
     }
 
-    // Log to audit trail
-    await db.collection('adminAuditLog').add({
-      timestamp: FieldValue.serverTimestamp(),
+    // Log to audit trail with centralized logger
+    await logAdminAction({
       adminUserId: adminVerification.userId || 'unknown',
       adminEmail: adminVerification.email || 'unknown',
       adminRole: adminVerification.claims?.superAdmin ? 'superAdmin' : 'admin',
-      action: 'user_updated',
+      actionType: AuditActionType.USER_PROFILE_UPDATED,
+      actionCategory: AuditCategory.USER_MANAGEMENT,
+      actionSeverity: AuditSeverity.NOTICE,
+      actionDescription: 'Updated user profile',
       targetUserId: uid,
-      targetUserEmail: authUser.email,
+      targetUserEmail: authUser.email || undefined,
       changes,
-      metadata: {
-        ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
-        userAgent: request.headers.get('user-agent') || 'unknown'
-      },
-      success: true
+      ipAddress: getIpAddress(request),
+      userAgent: getUserAgent(request),
+      apiEndpoint: request.url,
+      success: true,
     })
 
     console.info('[AdminUserEditAPI] User profile updated successfully', {
@@ -313,15 +322,20 @@ export async function PUT(
     try {
       const adminVerification = await requireAdmin(request)
       if (adminVerification.authorized) {
-        await db.collection('adminAuditLog').add({
-          timestamp: FieldValue.serverTimestamp(),
+        await logAdminAction({
           adminUserId: adminVerification.userId || 'unknown',
           adminEmail: adminVerification.email || 'unknown',
           adminRole: adminVerification.claims?.superAdmin ? 'superAdmin' : 'admin',
-          action: 'user_updated',
+          actionType: AuditActionType.USER_PROFILE_UPDATED,
+          actionCategory: AuditCategory.USER_MANAGEMENT,
+          actionSeverity: AuditSeverity.ERROR,
+          actionDescription: 'Failed to update user profile',
           targetUserId: params.uid,
+          ipAddress: getIpAddress(request),
+          userAgent: getUserAgent(request),
+          apiEndpoint: request.url,
           success: false,
-          error: errorMessage
+          error: errorMessage,
         })
       }
     } catch (auditError) {
