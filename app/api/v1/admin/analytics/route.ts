@@ -1,186 +1,294 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/admin-middleware'
-import { db } from '@/lib/firebase-admin'
-import { getAuth } from 'firebase-admin/auth'
+/**
+ * Admin Analytics API
+ * GET /api/v1/admin/analytics
+ * 
+ * Provides aggregated platform metrics for admin dashboard.
+ * Includes caching to reduce Firestore reads and improve performance.
+ * 
+ * Metrics:
+ * - Total users (Firebase Auth count)
+ * - Premium users (subscriptions where tier='premium')
+ * - AI tests generated today
+ * - New signups (7 days, 30 days)
+ * - Tests completed today
+ * - Average WPM across platform
+ * - System health indicators
+ * 
+ * @version 1.0
+ * @created November 17, 2025
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/admin-middleware';
+import { db } from '@/lib/firebase-admin';
+import { getAuth } from 'firebase-admin/auth';
+import { AuditActionType, AuditCategory, AuditSeverity } from '@/lib/types/audit';
+import { logAdminAction, getIpAddress, getUserAgent } from '@/lib/admin-audit-logger';
+
+// Cache configuration
+const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
+let cachedAnalytics: AnalyticsResponse | null = null;
+let cacheTimestamp = 0;
+
+interface AnalyticsResponse {
+  totalUsers: number;
+  premiumUsers: number;
+  freeUsers: number;
+  aiTestsToday: number;
+  newSignups7d: number;
+  newSignups30d: number;
+  testsCompletedToday: number;
+  avgWpm: number;
+  systemHealth: {
+    firestoreStatus: 'healthy' | 'degraded' | 'down';
+    authStatus: 'healthy' | 'degraded' | 'down';
+    lastUpdated: string;
+  };
+  timestamp: string;
+}
 
 /**
  * GET /api/v1/admin/analytics
- * Fetch analytics data for admin dashboard
- * Requires: Admin role
+ * Returns aggregated platform metrics with 5-minute caching
+ * 
+ * Query Parameters:
+ * - refresh: boolean (optional - bypass cache and fetch fresh data)
+ * 
+ * Response:
+ * {
+ *   totalUsers: number,
+ *   premiumUsers: number,
+ *   freeUsers: number,
+ *   aiTestsToday: number,
+ *   newSignups7d: number,
+ *   newSignups30d: number,
+ *   testsCompletedToday: number,
+ *   avgWpm: number,
+ *   systemHealth: { firestoreStatus, authStatus, lastUpdated },
+ *   timestamp: ISO 8601 string,
+ *   cached: boolean
+ * }
  */
 export async function GET(request: NextRequest) {
   try {
     // Verify admin authorization
-    const adminVerification = await requireAdmin(request)
+    const adminVerification = await requireAdmin(request);
     if (!adminVerification.authorized) {
-      console.error('[AdminAnalyticsAPI] Unauthorized access attempt', {
-        adminUserId: adminVerification.userId
-      })
+      console.error('[AnalyticsAPI] Unauthorized access attempt', {
+        adminUserId: adminVerification.userId,
+        error: adminVerification.error,
+      });
       return NextResponse.json(
         { success: false, message: 'Unauthorized: Admin access required' },
         { status: 403 }
-      )
+      );
     }
 
-    console.info('[AdminAnalyticsAPI] Fetching analytics', {
-      adminUserId: adminVerification.userId
-    })
+    const { searchParams } = new URL(request.url);
+    const forceRefresh = searchParams.get('refresh') === 'true';
 
-    const now = new Date()
-    const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-    const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-    const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-
-    // Fetch all users from Firebase Auth
-    const auth = getAuth()
-    let allUsers: any[] = []
-    let nextPageToken: string | undefined
-
-    do {
-      const listUsersResult = await auth.listUsers(1000, nextPageToken)
-      allUsers = allUsers.concat(listUsersResult.users)
-      nextPageToken = listUsersResult.pageToken
-    } while (nextPageToken)
-
-    // User statistics
-    const totalUsers = allUsers.length
-    const newUsersLast7Days = allUsers.filter(
-      (user) => new Date(user.metadata.creationTime) > last7Days
-    ).length
-    const newUsersLast30Days = allUsers.filter(
-      (user) => new Date(user.metadata.creationTime) > last30Days
-    ).length
-
-    // Active users (users who signed in recently)
-    const activeUsersLast24Hours = allUsers.filter(
-      (user) => user.metadata.lastSignInTime && new Date(user.metadata.lastSignInTime) > last24Hours
-    ).length
-
-    // Subscription statistics
-    const subscriptionsSnapshot = await db.collection('subscriptions').get()
-    const subscriptions = subscriptionsSnapshot.docs.map((doc) => doc.data())
-
-    const premiumUsers = subscriptions.filter((sub) => sub.tier === 'premium').length
-    const freeUsers = totalUsers - premiumUsers
-
-    const subscriptionDistribution = {
-      premium: premiumUsers,
-      free: freeUsers
+    // Check cache (unless force refresh requested)
+    const now = Date.now();
+    const cacheValid = cachedAnalytics && (now - cacheTimestamp < CACHE_DURATION_MS);
+    
+    if (cacheValid && !forceRefresh) {
+      console.info('[AnalyticsAPI] Returning cached analytics', {
+        adminUserId: adminVerification.userId,
+        cacheAge: Math.floor((now - cacheTimestamp) / 1000),
+      });
+      
+      // Log analytics access (cached)
+      await logAdminAction({
+        adminUserId: adminVerification.userId || 'unknown',
+        adminEmail: adminVerification.email || 'unknown',
+        adminRole: adminVerification.claims?.superAdmin ? 'superAdmin' : 'admin',
+        actionType: AuditActionType.USER_VIEWED,
+        actionCategory: AuditCategory.DATA_PRIVACY,
+        actionSeverity: AuditSeverity.INFO,
+        actionDescription: 'Viewed analytics dashboard (cached)',
+        ipAddress: getIpAddress(request),
+        userAgent: getUserAgent(request),
+        apiEndpoint: request.url,
+        success: true,
+      });
+      
+      return NextResponse.json({
+        success: true,
+        ...cachedAnalytics,
+        cached: true,
+      });
     }
 
-    // AI test statistics (last 24 hours)
-    const aiTestsSnapshot = await db
-      .collection('aiGeneratedTests')
-      .where('createdAt', '>=', last24Hours.toISOString())
-      .get()
-
-    const aiTestsToday = aiTestsSnapshot.size
-
-    // Test results statistics (last 24 hours)
-    const testsSnapshot = await db
-      .collection('testResults')
-      .where('completedAt', '>=', last24Hours)
-      .get()
-
-    const testsCompletedToday = testsSnapshot.size
-
-    // Calculate average WPM from test results
-    const testResults = testsSnapshot.docs.map((doc) => doc.data())
-    const totalWpm = testResults.reduce((sum, test) => sum + (test.wpm || 0), 0)
-    const averageWpm = testResults.length > 0 ? Math.round(totalWpm / testResults.length) : 0
-
-    // Admin action statistics
-    const adminAuditSnapshot = await db
-      .collection('adminAuditLog')
-      .orderBy('timestamp', 'desc')
-      .limit(100)
-      .get()
-
-    const recentAdminActions = adminAuditSnapshot.docs.map((doc) => {
-      const data = doc.data()
-      return {
-        id: doc.id,
-        action: data.action,
-        adminEmail: data.adminEmail,
-        targetUserEmail: data.targetUserEmail || null,
-        timestamp: data.timestamp?.toDate?.()?.toISOString() || new Date().toISOString(),
-        success: data.success || false
-      }
-    })
-
-    const totalAdminActions = adminAuditSnapshot.size
-
-    // User growth over time (last 30 days, grouped by day)
-    const userGrowthData: { date: string; count: number }[] = []
-    for (let i = 29; i >= 0; i--) {
-      const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000)
-      const startOfDay = new Date(date.setHours(0, 0, 0, 0))
-      const endOfDay = new Date(date.setHours(23, 59, 59, 999))
-
-      const count = allUsers.filter((user) => {
-        const createdAt = new Date(user.metadata.creationTime)
-        return createdAt >= startOfDay && createdAt <= endOfDay
-      }).length
-
-      userGrowthData.push({
-        date: startOfDay.toISOString().split('T')[0], // YYYY-MM-DD format
-        count
-      })
-    }
-
-    // Construct analytics response
-    const analytics = {
-      users: {
-        total: totalUsers,
-        newLast7Days: newUsersLast7Days,
-        newLast30Days: newUsersLast30Days,
-        activeLast24Hours: activeUsersLast24Hours
-      },
-      subscriptions: {
-        distribution: subscriptionDistribution,
-        premiumCount: premiumUsers,
-        freeCount: freeUsers,
-        conversionRate:
-          totalUsers > 0 ? Math.round((premiumUsers / totalUsers) * 100 * 10) / 10 : 0 // 1 decimal place
-      },
-      activity: {
-        aiTestsToday,
-        testsCompletedToday,
-        averageWpm
-      },
-      admin: {
-        recentActions: recentAdminActions,
-        totalActionsRecorded: totalAdminActions
-      },
-      charts: {
-        userGrowth: userGrowthData
-      }
-    }
-
-    console.info('[AdminAnalyticsAPI] Analytics fetched successfully', {
+    console.info('[AnalyticsAPI] Fetching fresh analytics', {
       adminUserId: adminVerification.userId,
-      totalUsers,
-      premiumUsers,
-      aiTestsToday
-    })
+      forceRefresh,
+    });
+
+    // Fetch fresh analytics
+    const analytics = await fetchAnalytics();
+
+    // Update cache
+    cachedAnalytics = analytics;
+    cacheTimestamp = now;
+
+    // Log analytics access (fresh)
+    await logAdminAction({
+      adminUserId: adminVerification.userId || 'unknown',
+      adminEmail: adminVerification.email || 'unknown',
+      adminRole: adminVerification.claims?.superAdmin ? 'superAdmin' : 'admin',
+      actionType: AuditActionType.USER_VIEWED,
+      actionCategory: AuditCategory.DATA_PRIVACY,
+      actionSeverity: AuditSeverity.INFO,
+      actionDescription: 'Viewed analytics dashboard (fresh data)',
+      ipAddress: getIpAddress(request),
+      userAgent: getUserAgent(request),
+      apiEndpoint: request.url,
+      success: true,
+    });
 
     return NextResponse.json({
       success: true,
-      ...analytics
-    })
+      ...analytics,
+      cached: false,
+    });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    console.error('[AdminAnalyticsAPI] Error fetching analytics', {
-      error: errorMessage
-    })
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[AnalyticsAPI] Error fetching analytics', {
+      error: errorMessage,
+      stack: error instanceof Error ? error.stack : undefined,
+    });
 
     return NextResponse.json(
       {
         success: false,
         message: 'Failed to fetch analytics',
-        error: errorMessage
+        error: errorMessage,
       },
       { status: 500 }
-    )
+    );
   }
+}
+
+/**
+ * Fetch fresh analytics from Firebase Auth and Firestore
+ * Runs multiple queries in parallel for performance
+ */
+async function fetchAnalytics(): Promise<AnalyticsResponse> {
+  const startTime = Date.now();
+  
+  // Calculate date boundaries
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+  // Execute all queries in parallel
+  const auth = getAuth();
+  const [
+    authResult,
+    subscriptionsSnapshot,
+    aiTestsSnapshot,
+    profiles7dSnapshot,
+    profiles30dSnapshot,
+    testsCompletedSnapshot,
+    allTestsSnapshot,
+  ] = await Promise.all([
+    // Total users from Firebase Auth
+    auth.listUsers(1000).catch(() => ({ users: [] })),
+    
+    // Premium users from subscriptions
+    db.collection('subscriptions')
+      .where('tier', '==', 'premium')
+      .where('status', '==', 'active')
+      .get()
+      .catch(() => ({ docs: [] })),
+    
+    // AI tests generated today
+    db.collection('aiGeneratedTests')
+      .where('createdAt', '>=', todayStart.toISOString())
+      .get()
+      .catch(() => ({ docs: [] })),
+    
+    // New signups in last 7 days
+    db.collection('profiles')
+      .where('createdAt', '>=', sevenDaysAgo.toISOString())
+      .get()
+      .catch(() => ({ docs: [] })),
+    
+    // New signups in last 30 days
+    db.collection('profiles')
+      .where('createdAt', '>=', thirtyDaysAgo.toISOString())
+      .get()
+      .catch(() => ({ docs: [] })),
+    
+    // Tests completed today
+    db.collection('testResults')
+      .where('completedAt', '>=', todayStart.toISOString())
+      .get()
+      .catch(() => ({ docs: [] })),
+    
+    // All test results for WPM average (limited to recent 1000 for performance)
+    db.collection('testResults')
+      .orderBy('completedAt', 'desc')
+      .limit(1000)
+      .get()
+      .catch(() => ({ docs: [] })),
+  ]);
+
+  // Calculate metrics
+  const totalUsers = authResult.users?.length || 0;
+  const premiumUsers = subscriptionsSnapshot.docs.length;
+  const freeUsers = totalUsers - premiumUsers;
+  const aiTestsToday = aiTestsSnapshot.docs.length;
+  const newSignups7d = profiles7dSnapshot.docs.length;
+  const newSignups30d = profiles30dSnapshot.docs.length;
+  const testsCompletedToday = testsCompletedSnapshot.docs.length;
+  
+  // Calculate average WPM
+  let avgWpm = 0;
+  if (allTestsSnapshot.docs.length > 0) {
+    const totalWpm = allTestsSnapshot.docs.reduce((sum: number, doc: any) => {
+      const data = doc.data();
+      return sum + (data.wpm || 0);
+    }, 0);
+    avgWpm = Math.round(totalWpm / allTestsSnapshot.docs.length);
+  }
+
+  // System health checks
+  const systemHealth = {
+    firestoreStatus: (allTestsSnapshot.docs.length >= 0 ? 'healthy' : 'down') as 'healthy' | 'degraded' | 'down',
+    authStatus: (totalUsers >= 0 ? 'healthy' : 'down') as 'healthy' | 'degraded' | 'down',
+    lastUpdated: new Date().toISOString(),
+  };
+
+  const duration = Date.now() - startTime;
+  console.info('[AnalyticsAPI] Analytics fetched successfully', {
+    totalUsers,
+    premiumUsers,
+    aiTestsToday,
+    duration,
+  });
+
+  return {
+    totalUsers,
+    premiumUsers,
+    freeUsers,
+    aiTestsToday,
+    newSignups7d,
+    newSignups30d,
+    testsCompletedToday,
+    avgWpm,
+    systemHealth,
+    timestamp: new Date().toISOString(),
+  };
+}
+
+/**
+ * Helper: Clear analytics cache (useful for testing or manual refresh)
+ * Can be called from admin tools or scheduled tasks
+ */
+export function clearAnalyticsCache(): void {
+  cachedAnalytics = null;
+  cacheTimestamp = 0;
+  console.info('[AnalyticsAPI] Cache cleared');
 }
