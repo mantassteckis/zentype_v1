@@ -11,7 +11,7 @@
 
 import { HttpsError } from 'firebase-functions/v2/https';
 import { getFirestore } from 'firebase-admin/firestore';
-import { endSpan, startSpan } from './logger';
+import * as logger from 'firebase-functions/logger';
 
 const firestore = getFirestore();
 
@@ -35,8 +35,6 @@ const FREE_TIER_DAILY_LIMIT = 5;
  * ```
  */
 export async function checkAiTestLimit(userId: string): Promise<void> {
-  const spanId = startSpan('SubscriptionRateLimiter', 'checkAiTestLimit');
-  
   try {
     // 1. Fetch user's subscription document
     const subscriptionRef = firestore.collection('subscriptions').doc(userId);
@@ -73,25 +71,18 @@ export async function checkAiTestLimit(userId: string): Promise<void> {
     
     // 3. Premium users have unlimited access - allow immediately
     if (subscription.tier === 'premium' && subscription.status === 'active') {
-      console.log('[SubscriptionRateLimiter] Premium user - unlimited access', {
+      logger.info('[SubscriptionRateLimiter] Premium user - unlimited access', {
         userId,
         tier: subscription.tier
       });
-      endSpan(spanId, 'success', { tier: 'premium', unlimited: true });
       return;
     }
     
     // 4. Check free tier limit
     if (subscription.aiTestsUsedToday >= FREE_TIER_DAILY_LIMIT) {
-      console.warn('[SubscriptionRateLimiter] Daily limit reached', {
+      logger.warn('[SubscriptionRateLimiter] Daily limit reached', {
         userId,
         tier: subscription.tier,
-        limit: FREE_TIER_DAILY_LIMIT,
-        used: subscription.aiTestsUsedToday
-      });
-      
-      endSpan(spanId, 'error', {
-        message: 'Daily limit reached',
         limit: FREE_TIER_DAILY_LIMIT,
         used: subscription.aiTestsUsedToday
       });
@@ -125,17 +116,11 @@ export async function checkAiTestLimit(userId: string): Promise<void> {
       updatedAt: new Date().toISOString()
     }, { merge: true });
     
-    console.log('[SubscriptionRateLimiter] AI test limit check passed', {
+    logger.info('[SubscriptionRateLimiter] AI test limit check passed', {
       userId,
       tier: subscription.tier,
       used: newCount,
       limit: FREE_TIER_DAILY_LIMIT,
-      remaining: FREE_TIER_DAILY_LIMIT - newCount
-    });
-    
-    endSpan(spanId, 'success', {
-      tier: subscription.tier,
-      used: newCount,
       remaining: FREE_TIER_DAILY_LIMIT - newCount
     });
     
@@ -146,18 +131,14 @@ export async function checkAiTestLimit(userId: string): Promise<void> {
     }
     
     // Log unexpected errors
-    console.error('[SubscriptionRateLimiter] Unexpected error checking AI test limit', {
+    logger.error('[SubscriptionRateLimiter] Unexpected error checking AI test limit', {
       userId,
       error: error instanceof Error ? error.message : String(error)
     });
     
-    endSpan(spanId, 'error', {
-      message: error instanceof Error ? error.message : String(error)
-    });
-    
     // Fail open - allow request if subscription check fails
     // (Better to allow than to block legitimate users due to infrastructure issues)
-    console.warn('[SubscriptionRateLimiter] Failing open due to error - allowing request');
+    logger.warn('[SubscriptionRateLimiter] Failing open due to error - allowing request');
   }
 }
 
@@ -187,8 +168,6 @@ export async function getUserSubscriptionStatus(userId: string): Promise<{
   dailyLimit: number | 'unlimited';
   nextResetDate: string;
 }> {
-  const spanId = startSpan('SubscriptionRateLimiter', 'getUserSubscriptionStatus');
-  
   try {
     const subscriptionRef = firestore.collection('subscriptions').doc(userId);
     const subscriptionDoc = await subscriptionRef.get();
@@ -212,7 +191,6 @@ export async function getUserSubscriptionStatus(userId: string): Promise<{
     
     // Premium tier - unlimited
     if (subscription.tier === 'premium' && subscription.status === 'active') {
-      endSpan(spanId, 'success', { tier: 'premium' });
       return {
         tier: 'premium',
         status: subscription.status,
@@ -226,12 +204,6 @@ export async function getUserSubscriptionStatus(userId: string): Promise<{
     // Free tier - calculate remaining
     const remaining = Math.max(0, FREE_TIER_DAILY_LIMIT - subscription.aiTestsUsedToday);
     
-    endSpan(spanId, 'success', {
-      tier: 'free',
-      used: subscription.aiTestsUsedToday,
-      remaining
-    });
-    
     return {
       tier: 'free',
       status: subscription.status || 'active',
@@ -242,13 +214,9 @@ export async function getUserSubscriptionStatus(userId: string): Promise<{
     };
     
   } catch (error) {
-    console.error('[SubscriptionRateLimiter] Error fetching subscription status', {
+    logger.error('[SubscriptionRateLimiter] Error fetching subscription status', {
       userId,
       error: error instanceof Error ? error.message : String(error)
-    });
-    
-    endSpan(spanId, 'error', {
-      message: error instanceof Error ? error.message : String(error)
     });
     
     // Return default free tier on error

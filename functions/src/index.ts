@@ -301,6 +301,12 @@ export const submitTestResult = onCall({
 import { checkRateLimit } from './rate-limiter';
 import { checkAiTestLimit } from './subscription-rate-limiter';
 
+/**
+ * Export Simple Test Generator
+ * Allows users to paste text and create typing tests without AI processing
+ */
+export { generateSimpleTest } from './simple-test-generator';
+
 export const generateAiTest = onCall({
   cors: [
     "http://localhost:3000",
