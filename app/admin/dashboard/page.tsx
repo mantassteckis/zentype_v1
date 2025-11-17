@@ -19,9 +19,41 @@ interface AdminData {
   }
 }
 
+interface Analytics {
+  users: {
+    total: number
+    newLast7Days: number
+    newLast30Days: number
+    activeLast24Hours: number
+  }
+  subscriptions: {
+    premiumCount: number
+    freeCount: number
+    conversionRate: number
+  }
+  activity: {
+    aiTestsToday: number
+    testsCompletedToday: number
+    averageWpm: number
+  }
+  admin: {
+    totalActionsRecorded: number
+    recentActions: Array<{
+      id: string
+      action: string
+      adminEmail: string
+      targetUserEmail: string | null
+      timestamp: string
+      success: boolean
+    }>
+  }
+}
+
 export default function AdminDashboardPage() {
   const [adminData, setAdminData] = useState<AdminData | null>(null)
+  const [analytics, setAnalytics] = useState<Analytics | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [analyticsLoading, setAnalyticsLoading] = useState(true)
   const router = useRouter()
 
   useEffect(() => {
@@ -52,9 +84,32 @@ export default function AdminDashboardPage() {
         const data = await response.json()
         setAdminData(data)
         setIsLoading(false)
+
+        // Fetch analytics data
+        fetchAnalytics(idToken)
       } catch (error) {
         console.error('[Admin Dashboard] Verification error:', error)
         router.push('/admin/login')
+      }
+    }
+
+    const fetchAnalytics = async (idToken: string) => {
+      try {
+        const response = await fetch('/api/v1/admin/analytics', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${idToken}`,
+          },
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setAnalytics(data)
+        }
+      } catch (error) {
+        console.error('[Admin Dashboard] Analytics fetch error:', error)
+      } finally {
+        setAnalyticsLoading(false)
       }
     }
 
@@ -141,37 +196,53 @@ export default function AdminDashboardPage() {
           <div className="bg-card border border-border rounded-lg p-6">
             <div className="flex items-center justify-between mb-4">
               <Users className="w-8 h-8 text-blue-500" />
-              <span className="text-2xl font-bold text-foreground">-</span>
+              <span className="text-2xl font-bold text-foreground">
+                {analyticsLoading ? '...' : analytics?.users.total || 0}
+              </span>
             </div>
             <h3 className="text-sm font-medium text-muted-foreground">Total Users</h3>
-            <p className="text-xs text-muted-foreground mt-1">Coming in Phase 2</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {analyticsLoading ? 'Loading...' : `+${analytics?.users.newLast7Days || 0} this week`}
+            </p>
           </div>
 
           <div className="bg-card border border-border rounded-lg p-6">
             <div className="flex items-center justify-between mb-4">
               <CreditCard className="w-8 h-8 text-green-500" />
-              <span className="text-2xl font-bold text-foreground">-</span>
+              <span className="text-2xl font-bold text-foreground">
+                {analyticsLoading ? '...' : analytics?.subscriptions.premiumCount || 0}
+              </span>
             </div>
             <h3 className="text-sm font-medium text-muted-foreground">Premium Users</h3>
-            <p className="text-xs text-muted-foreground mt-1">Coming in Phase 3</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {analyticsLoading ? 'Loading...' : `${analytics?.subscriptions.conversionRate || 0}% conversion`}
+            </p>
           </div>
 
           <div className="bg-card border border-border rounded-lg p-6">
             <div className="flex items-center justify-between mb-4">
               <Activity className="w-8 h-8 text-purple-500" />
-              <span className="text-2xl font-bold text-foreground">-</span>
+              <span className="text-2xl font-bold text-foreground">
+                {analyticsLoading ? '...' : analytics?.activity.aiTestsToday || 0}
+              </span>
             </div>
             <h3 className="text-sm font-medium text-muted-foreground">AI Tests Today</h3>
-            <p className="text-xs text-muted-foreground mt-1">Coming in Phase 3</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {analyticsLoading ? 'Loading...' : `${analytics?.activity.testsCompletedToday || 0} tests completed`}
+            </p>
           </div>
 
           <div className="bg-card border border-border rounded-lg p-6">
             <div className="flex items-center justify-between mb-4">
               <Settings className="w-8 h-8 text-amber-500" />
-              <span className="text-2xl font-bold text-foreground">-</span>
+              <span className="text-2xl font-bold text-foreground">
+                {analyticsLoading ? '...' : analytics?.admin.totalActionsRecorded || 0}
+              </span>
             </div>
             <h3 className="text-sm font-medium text-muted-foreground">Admin Actions</h3>
-            <p className="text-xs text-muted-foreground mt-1">Coming in Phase 5</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {analyticsLoading ? 'Loading...' : 'Recent audit logs'}
+            </p>
           </div>
         </div>
 
