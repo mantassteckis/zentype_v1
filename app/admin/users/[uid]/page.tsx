@@ -6,7 +6,7 @@ import { Header } from "@/components/header"
 import { 
   ArrowLeft, 
   User, 
-  Mail, 
+  Mail,
   Calendar, 
   Crown, 
   Shield, 
@@ -20,7 +20,8 @@ import {
   Target,
   Zap,
   FileText,
-  AlertTriangle
+  AlertTriangle,
+  CreditCard
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { auth } from "@/lib/firebase/client"
@@ -40,6 +41,8 @@ interface UserDetailData {
     superAdmin?: boolean
     canDeleteUsers?: boolean
     canManageSubscriptions?: boolean
+    canViewAuditLogs?: boolean
+    canManageSettings?: boolean
   }
   
   // Profile data (Firestore)
@@ -234,7 +237,7 @@ export default function UserDetailPage() {
       const result = await response.json()
       
       if (result.success) {
-        alert(`User promoted to ${role}! Sessions revoked - user must re-login.`)
+        alert(result.message)
         window.location.reload()
       } else {
         alert(`Failed to promote user: ${result.message}`)
@@ -242,6 +245,71 @@ export default function UserDetailPage() {
     } catch (error) {
       console.error('[AdminUserDetail] Error promoting user', { error })
       alert('Error promoting user')
+    }
+  }
+
+  const handleEditPermissions = async () => {
+    console.info('[AdminUserDetail] Edit permissions clicked', { uid })
+    
+    // Get current permissions
+    const currentRole = userData?.customClaims.superAdmin ? 'superAdmin' : (userData?.customClaims.admin ? 'admin' : 'user')
+    const currentPerms = userData?.customClaims || {}
+    
+    // Ask for new role
+    const role = prompt(`Enter role (admin or superAdmin). Current: ${currentRole}`, currentRole)
+    if (!role || !['admin', 'superAdmin'].includes(role)) {
+      alert('Invalid role. Must be "admin" or "superAdmin"')
+      return
+    }
+    
+    // Ask for each permission
+    const deleteUsers = confirm(`Permission: Delete Users?\nCurrent: ${currentPerms.canDeleteUsers ? 'YES' : 'NO'}\n\nClick OK for YES, Cancel for NO`)
+    const manageSubscriptions = confirm(`Permission: Manage Subscriptions?\nCurrent: ${currentPerms.canManageSubscriptions ? 'YES' : 'NO'}\n\nClick OK for YES, Cancel for NO`)
+    const viewAuditLogs = confirm(`Permission: View Audit Logs?\nCurrent: ${currentPerms.canViewAuditLogs ? 'YES' : 'NO'}\n\nClick OK for YES, Cancel for NO`)
+    const manageSettings = confirm(`Permission: Manage Settings?\nCurrent: ${currentPerms.canManageSettings ? 'YES' : 'NO'}\n\nClick OK for YES, Cancel for NO`)
+    
+    const confirmed = confirm(`Update ${role} permissions?\n\n✓ Delete Users: ${deleteUsers}\n✓ Manage Subscriptions: ${manageSubscriptions}\n✓ View Audit Logs: ${viewAuditLogs}\n✓ Manage Settings: ${manageSettings}`)
+    if (!confirmed) return
+    
+    try {
+      const user = auth.currentUser
+      if (!user) {
+        alert('Not authenticated')
+        return
+      }
+      
+      const idToken = await user.getIdToken()
+      
+      console.info('[AdminUserDetail] Updating permissions', { uid, role, permissions: { deleteUsers, manageSubscriptions, viewAuditLogs, manageSettings } })
+      
+      const response = await fetch(`/api/v1/admin/users/${uid}/promote`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          role,
+          permissions: {
+            canDeleteUsers: deleteUsers,
+            canManageSubscriptions: manageSubscriptions,
+            canViewAuditLogs: viewAuditLogs,
+            canManageSettings: manageSettings
+          }
+        })
+      })
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        alert(result.message)
+        window.location.reload()
+      } else {
+        alert(`Failed to update permissions: ${result.message}`)
+      }
+    } catch (error) {
+      console.error('[AdminUserDetail] Error updating permissions', { error })
+      alert('Error updating permissions')
     }
   }
 
@@ -344,6 +412,59 @@ export default function UserDetailPage() {
     } catch (error) {
       console.error('[AdminUserDetail] Error deleting account', { error })
       alert('Error deleting account')
+    }
+  }
+
+  const handleChangeSubscriptionTier = async () => {
+    console.info('[AdminUserDetail] Change subscription tier clicked', { uid })
+    
+    const currentTier = userData?.subscription?.tier || 'free'
+    const newTier = prompt(`Enter new subscription tier (free or premium).\nCurrent: ${currentTier}`, currentTier)
+    
+    if (!newTier || !['free', 'premium'].includes(newTier)) {
+      alert('Invalid tier. Must be "free" or "premium"')
+      return
+    }
+    
+    if (newTier === currentTier) {
+      alert('No change - tier is already ' + currentTier)
+      return
+    }
+    
+    const confirmed = confirm(`Change subscription from ${currentTier} to ${newTier}?\n\nThis will ${newTier === 'premium' ? 'give unlimited AI test generation' : 'limit AI tests to 5 per day'}.`)
+    if (!confirmed) return
+    
+    try {
+      const user = auth.currentUser
+      if (!user) {
+        alert('Not authenticated')
+        return
+      }
+      
+      const idToken = await user.getIdToken()
+      
+      console.info('[AdminUserDetail] Updating subscription tier', { uid, newTier })
+      
+      const response = await fetch(`/api/v1/admin/users/${uid}/subscription`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ tier: newTier })
+      })
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        alert(`Subscription tier updated to ${newTier}!`)
+        window.location.reload()
+      } else {
+        alert(`Failed to update subscription tier: ${result.message}`)
+      }
+    } catch (error) {
+      console.error('[AdminUserDetail] Error updating subscription tier', { error })
+      alert('Error updating subscription tier')
     }
   }
 
@@ -493,12 +614,26 @@ export default function UserDetailPage() {
                 <Edit className="w-4 h-4 mr-2" />
                 Edit Profile
               </Button>
-              {!isAdmin && (
+              {!isAdmin ? (
                 <Button onClick={handlePromoteToAdmin} variant="outline" size="sm">
                   <UserPlus className="w-4 h-4 mr-2" />
                   Promote to Admin
                 </Button>
+              ) : (
+                <Button onClick={handleEditPermissions} variant="outline" size="sm" className="border-orange-500 text-orange-500">
+                  <Shield className="w-4 h-4 mr-2" />
+                  Edit Permissions
+                </Button>
               )}
+              <Button 
+                onClick={handleChangeSubscriptionTier}
+                variant="outline" 
+                size="sm"
+                className="border-purple-500 text-purple-500"
+              >
+                <CreditCard className="w-4 h-4 mr-2" />
+                Change Subscription
+              </Button>
               <Button 
                 onClick={handleSuspendAccount} 
                 variant="outline" 
