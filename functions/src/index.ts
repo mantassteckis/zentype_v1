@@ -299,6 +299,13 @@ export const submitTestResult = onCall({
  * Uses Google AI through Genkit to create custom typing content
  */
 import { checkRateLimit } from './rate-limiter';
+import { checkAiTestLimit } from './subscription-rate-limiter';
+
+/**
+ * Export Simple Test Generator
+ * Allows users to paste text and create typing tests without AI processing
+ */
+export { generateSimpleTest } from './simple-test-generator';
 
 export const generateAiTest = onCall({
   cors: [
@@ -336,6 +343,9 @@ export const generateAiTest = onCall({
   
   // Rate Limiting Check
   await checkRateLimit('generateAiTest', userId);
+
+  // Subscription-based Rate Limiting (5 tests/day for free, unlimited for premium)
+  await checkAiTestLimit(userId);
 
   logger.info("✅ DEBUG: Authentication successful", { 
     userId,
