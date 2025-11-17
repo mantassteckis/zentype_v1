@@ -19,7 +19,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -73,6 +73,7 @@ export default function AuditLogPage() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(50);
   const [total, setTotal] = useState(0);
+  const [filteredTotal, setFilteredTotal] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   
   // Filters
@@ -86,11 +87,33 @@ export default function AuditLogPage() {
   const [successOnly, setSuccessOnly] = useState(false);
   const [failedOnly, setFailedOnly] = useState(false);
   
+  // Filter options with counts
+  const [availableFilters, setAvailableFilters] = useState<{
+    actionTypes: Map<string, number>;
+    categories: Map<string, number>;
+    severities: Map<string, number>;
+  }>({
+    actionTypes: new Map(),
+    categories: new Map(),
+    severities: new Map(),
+  });
+  
   // Expandable rows
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    fetchLogs();
+    // Check authentication before fetching logs
+    const checkAuthAndFetch = async () => {
+      const user = auth.currentUser;
+      if (!user) {
+        console.warn('[AuditLogPage] User not authenticated, redirecting to login');
+        router.push('/admin/login');
+        return;
+      }
+      await fetchLogs();
+    };
+    
+    checkAuthAndFetch();
   }, [page, limit]);
 
   const fetchLogs = async () => {
@@ -117,7 +140,9 @@ export default function AuditLogPage() {
       // Get current user's ID token for authentication
       const user = auth.currentUser;
       if (!user) {
-        throw new Error('Not authenticated');
+        console.warn('[AuditLogPage] User not authenticated, redirecting to login');
+        router.push('/admin/login');
+        return;
       }
       
       const idToken = await user.getIdToken();
@@ -135,12 +160,50 @@ export default function AuditLogPage() {
       
       setLogs(data.logs);
       setTotal(data.total);
+      setFilteredTotal(data.filteredTotal || data.logs.length);
       setHasMore(data.hasMore);
+      
+      // Compute available filter options from current results
+      const actionTypeCounts = new Map<string, number>();
+      const categoryCounts = new Map<string, number>();
+      const severityCounts = new Map<string, number>();
+      
+      data.logs.forEach((log: AdminAuditLogEntry) => {
+        // Count action types
+        const type = log.action?.type;
+        if (type) {
+          actionTypeCounts.set(type, (actionTypeCounts.get(type) || 0) + 1);
+        }
+        
+        // Count categories
+        const cat = log.action?.category;
+        if (cat) {
+          categoryCounts.set(cat, (categoryCounts.get(cat) || 0) + 1);
+        }
+        
+        // Count severities
+        const sev = log.action?.severity;
+        if (sev) {
+          severityCounts.set(sev, (severityCounts.get(sev) || 0) + 1);
+        }
+      });
+      
+      setAvailableFilters({
+        actionTypes: actionTypeCounts,
+        categories: categoryCounts,
+        severities: severityCounts,
+      });
       
       console.info('[AuditLogPage] Logs fetched', {
         count: data.logs.length,
         page,
         total: data.total,
+        filteredTotal: data.filteredTotal,
+        filterCounts: {
+          actionTypes: actionTypeCounts.size,
+          categories: categoryCounts.size,
+          severities: severityCounts.size,
+        },
       });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
@@ -156,6 +219,14 @@ export default function AuditLogPage() {
       setExporting(true);
       setError(null);
       
+      // Check authentication first
+      const user = auth.currentUser;
+      if (!user) {
+        console.warn('[AuditLogPage] User not authenticated, redirecting to login');
+        router.push('/admin/login');
+        return;
+      }
+      
       // Build query parameters (same filters as current view)
       const params = new URLSearchParams({
         export: 'csv',
@@ -166,18 +237,12 @@ export default function AuditLogPage() {
       if (startDate) params.append('startDate', startDate);
       if (endDate) params.append('endDate', endDate);
       if (adminEmail) params.append('adminEmail', adminEmail);
-      if (actionType) params.append('actionType', actionType);
-      if (actionCategory) params.append('actionCategory', actionCategory);
-      if (severity) params.append('severity', severity);
+      if (actionType && actionType !== 'all') params.append('actionType', actionType);
+      if (actionCategory && actionCategory !== 'all') params.append('actionCategory', actionCategory);
+      if (severity && severity !== 'all') params.append('severity', severity);
       if (targetUserEmail) params.append('targetUserEmail', targetUserEmail);
       if (successOnly) params.append('successOnly', 'true');
       if (failedOnly) params.append('failedOnly', 'true');
-      
-      // Get current user's ID token for authentication
-      const user = auth.currentUser;
-      if (!user) {
-        throw new Error('Not authenticated');
-      }
       
       const idToken = await user.getIdToken();
       
@@ -188,8 +253,19 @@ export default function AuditLogPage() {
       });
       
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || 'Failed to export audit logs');
+        // Only try to parse JSON if it failed
+        try {
+          const data = await response.json();
+          throw new Error(data.message || 'Failed to export audit logs');
+        } catch {
+          throw new Error('Failed to export audit logs');
+        }
+      }
+      
+      // Check if response is actually CSV (not JSON error)
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('text/csv')) {
+        throw new Error('Invalid response format - expected CSV');
       }
       
       // Download CSV file
@@ -394,12 +470,14 @@ export default function AuditLogPage() {
                   <SelectValue placeholder="All actions" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All actions</SelectItem>
-                  {Object.values(AuditActionType).map(type => (
-                    <SelectItem key={type} value={type}>
-                      {type.replace(/_/g, ' ')}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="all">All actions ({total})</SelectItem>
+                  {Object.values(AuditActionType)
+                    .filter(type => availableFilters.actionTypes.has(type))
+                    .map(type => (
+                      <SelectItem key={type} value={type}>
+                        {type.replace(/_/g, ' ')} ({availableFilters.actionTypes.get(type) || 0})
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -412,12 +490,14 @@ export default function AuditLogPage() {
                   <SelectValue placeholder="All categories" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All categories</SelectItem>
-                  {Object.values(AuditCategory).map(cat => (
-                    <SelectItem key={cat} value={cat}>
-                      {cat.replace(/_/g, ' ')}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="all">All categories ({total})</SelectItem>
+                  {Object.values(AuditCategory)
+                    .filter(cat => availableFilters.categories.has(cat))
+                    .map(cat => (
+                      <SelectItem key={cat} value={cat}>
+                        {cat.replace(/_/g, ' ')} ({availableFilters.categories.get(cat) || 0})
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -430,12 +510,14 @@ export default function AuditLogPage() {
                   <SelectValue placeholder="All severities" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All severities</SelectItem>
-                  {Object.values(AuditSeverity).map(sev => (
-                    <SelectItem key={sev} value={sev}>
-                      {sev}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="all">All severities ({total})</SelectItem>
+                  {Object.values(AuditSeverity)
+                    .filter(sev => availableFilters.severities.has(sev))
+                    .map(sev => (
+                      <SelectItem key={sev} value={sev}>
+                        {sev} ({availableFilters.severities.get(sev) || 0})
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -488,10 +570,15 @@ export default function AuditLogPage() {
       <Card>
         <CardHeader>
           <CardTitle>
-            Audit Entries ({total > 0 ? total : logs.length} total)
+            Audit Entries ({filteredTotal > 0 ? `${filteredTotal} out of ${total}` : total} total)
           </CardTitle>
           <CardDescription>
             Showing page {page} • {logs.length} entries
+            {filteredTotal > 0 && filteredTotal < total && (
+              <span className="text-yellow-600 dark:text-yellow-400 ml-2">
+                (filtered from {total} total entries)
+              </span>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -524,8 +611,8 @@ export default function AuditLogPage() {
                 </TableHeader>
                 <TableBody>
                   {logs.map(log => (
-                    <>
-                      <TableRow key={log.eventId} className="cursor-pointer hover:bg-muted/50">
+                    <React.Fragment key={log.eventId}>
+                      <TableRow className="cursor-pointer hover:bg-muted/50">
                         <TableCell onClick={() => toggleRowExpansion(log.eventId)}>
                           {expandedRows.has(log.eventId) ? (
                             <ChevronUp className="w-4 h-4" />
@@ -668,7 +755,7 @@ export default function AuditLogPage() {
                           </TableCell>
                         </TableRow>
                       )}
-                    </>
+                    </React.Fragment>
                   ))}
                 </TableBody>
               </Table>

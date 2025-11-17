@@ -96,9 +96,9 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
     const adminEmail = searchParams.get('adminEmail');
-    const actionType = searchParams.get('actionType') as AuditActionType | null;
-    const actionCategory = searchParams.get('actionCategory') as AuditCategory | null;
-    const severity = searchParams.get('severity') as AuditSeverity | null;
+    const actionType = searchParams.get('actionType'); // String or null (can be 'all')
+    const actionCategory = searchParams.get('actionCategory'); // String or null (can be 'all')
+    const severity = searchParams.get('severity'); // String or null (can be 'all')
     const targetUserEmail = searchParams.get('targetUserEmail');
     const successOnly = searchParams.get('successOnly') === 'true';
     const failedOnly = searchParams.get('failedOnly') === 'true';
@@ -113,57 +113,92 @@ export async function GET(request: NextRequest) {
       export: exportFormat,
     });
 
-    // Build Firestore query
+    // Build Firestore query with smart filtering to avoid composite index requirements
+    // Strategy: Use only the most selective filter in the query, then filter the rest in-memory
     let query = db.collection('adminAuditLog').orderBy('timestamp', 'desc');
 
-    // Apply filters
+    // Count active filters to determine strategy
+    const activeFilters = [
+      startDate, 
+      endDate, 
+      adminEmail, 
+      actionType, 
+      actionCategory, 
+      severity, 
+      targetUserEmail, 
+      successOnly, 
+      failedOnly
+    ].filter(f => f !== null && f !== undefined && f !== false && f !== '').length;
+
+    // Apply timestamp filters (most common and indexed)
     if (startDate) {
       query = query.where('timestamp', '>=', startDate);
     }
     if (endDate) {
       query = query.where('timestamp', '<=', endDate);
     }
-    if (adminEmail) {
-      query = query.where('actor.email', '==', adminEmail);
-    }
-    if (actionType) {
-      query = query.where('action.type', '==', actionType);
-    }
-    if (actionCategory) {
-      query = query.where('action.category', '==', actionCategory);
-    }
-    if (severity) {
-      query = query.where('action.severity', '==', severity);
-    }
-    if (targetUserEmail) {
-      query = query.where('target.email', '==', targetUserEmail);
-    }
-    if (successOnly) {
-      query = query.where('result.success', '==', true);
-    }
-    if (failedOnly) {
-      query = query.where('result.success', '==', false);
+
+    // If only date filters or no filters at all, we can safely use orderBy
+    // For any additional filters, fetch more data and filter in-memory to avoid composite indexes
+    let fetchLimit = limit + 1;
+    if (activeFilters > 2) {
+      // Fetch extra documents for in-memory filtering (multiply by 3 as heuristic)
+      fetchLimit = (limit + 1) * 3;
+      console.info('[AuditLogAPI] Using in-memory filtering strategy', {
+        activeFilters,
+        fetchLimit,
+      });
     }
 
-    // Execute query with pagination
-    const snapshot = await query.limit(limit + 1).offset(offset).get();
+    // Execute base query
+    const snapshot = await query.limit(fetchLimit).offset(offset).get();
     
-    const hasMore = snapshot.docs.length > limit;
-    const logs = snapshot.docs.slice(0, limit).map(doc => ({
+    // Apply in-memory filters for fields that would require composite indexes
+    let allLogs = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
     })) as AdminAuditLogEntry[];
 
-    // Get total count (expensive - only for first page)
-    let total = 0;
+    // Filter in-memory
+    if (adminEmail) {
+      allLogs = allLogs.filter(log => log.actor?.email === adminEmail);
+    }
+    if (actionType && actionType !== 'all') {
+      allLogs = allLogs.filter(log => log.action?.type === actionType);
+    }
+    if (actionCategory && actionCategory !== 'all') {
+      allLogs = allLogs.filter(log => log.action?.category === actionCategory);
+    }
+    if (severity && severity !== 'all') {
+      allLogs = allLogs.filter(log => log.action?.severity === severity);
+    }
+    if (targetUserEmail) {
+      allLogs = allLogs.filter(log => log.target?.email === targetUserEmail);
+    }
+    if (successOnly) {
+      allLogs = allLogs.filter(log => log.result?.success === true);
+    }
+    if (failedOnly) {
+      allLogs = allLogs.filter(log => log.result?.success === false);
+    }
+
+    // Apply pagination after filtering
+    const hasMore = allLogs.length > limit;
+    const filteredTotal = allLogs.length; // Count after filters applied
+    const logs = allLogs.slice(0, limit);
+
+    // Get total count (before filters - expensive - only for first page)
+    let totalBeforeFilters = 0;
     if (page === 1) {
       const countSnapshot = await query.count().get();
-      total = countSnapshot.data().count;
+      totalBeforeFilters = countSnapshot.data().count;
     }
 
     console.info('[AuditLogAPI] Query executed successfully', {
       adminUserId: adminVerification.userId,
       resultsReturned: logs.length,
+      filteredTotal,
+      totalBeforeFilters,
       hasMore,
       page,
     });
@@ -210,7 +245,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       logs,
-      total,
+      total: totalBeforeFilters,
+      filteredTotal,
       page,
       limit,
       hasMore,

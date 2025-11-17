@@ -67,7 +67,18 @@ export default function AnalyticsPage() {
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
 
   useEffect(() => {
-    fetchAnalytics();
+    // Check authentication before fetching analytics
+    const checkAuthAndFetch = async () => {
+      const user = auth.currentUser;
+      if (!user) {
+        console.warn('[AnalyticsPage] User not authenticated, redirecting to login');
+        router.push('/admin/login');
+        return;
+      }
+      await fetchAnalytics();
+    };
+    
+    checkAuthAndFetch();
   }, []);
 
   // Auto-refresh every 30 seconds
@@ -89,7 +100,9 @@ export default function AnalyticsPage() {
       // Get current user's ID token for authentication
       const user = auth.currentUser;
       if (!user) {
-        throw new Error('Not authenticated');
+        console.warn('[AnalyticsPage] User not authenticated, redirecting to login');
+        router.push('/admin/login');
+        return;
       }
       
       const idToken = await user.getIdToken();

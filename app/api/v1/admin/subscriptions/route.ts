@@ -107,9 +107,7 @@ export async function GET(request: NextRequest) {
         ...data,
         // Calculate remaining tests for display
         aiTestsRemaining: data.tier === 'premium' ? 'unlimited' : 
-                          Math.max(0, 5 - (data.aiTestsUsedToday || 0)),
-        // Always include dailyLimit for display purposes
-        dailyLimit: data.tier === 'premium' ? 'unlimited' : 5
+                          Math.max(0, 5 - (data.aiTestsUsedToday || 0))
       });
     });
     
@@ -127,8 +125,7 @@ export async function GET(request: NextRequest) {
         lastResetDate: todayUtc,
         aiTestsRemaining: 5,
         startDate: authUser.metadata.creationTime,
-        createdAt: authUser.metadata.creationTime,
-        dailyLimit: 5
+        createdAt: authUser.metadata.creationTime
       };
       
       return {
@@ -144,20 +141,8 @@ export async function GET(request: NextRequest) {
       };
     });
     
-    // Apply tier filter if specified (client-side filtering after enrichment)
-    let filteredSubscriptions = enrichedSubscriptions;
-    if (tierFilter) {
-      filteredSubscriptions = filteredSubscriptions.filter(user => 
-        user.subscription.tier === tierFilter
-      );
-      console.log('[Admin Subscriptions API] Tier filter applied', {
-        tierFilter,
-        beforeCount: enrichedSubscriptions.length,
-        afterCount: filteredSubscriptions.length
-      });
-    }
-    
     // Apply search filter if specified
+    let filteredSubscriptions = enrichedSubscriptions;
     if (searchQuery) {
       filteredSubscriptions = filteredSubscriptions.filter(user => 
         user.email.toLowerCase().includes(searchQuery) ||
