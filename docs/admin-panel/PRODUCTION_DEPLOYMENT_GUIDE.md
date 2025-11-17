@@ -334,15 +334,9 @@ Set these in Firebase Console → Functions → Configuration:
 # Gemini API Key (for AI test generation)
 GEMINI_API_KEY=your_gemini_api_key_here
 
-# Stripe Keys (for subscription management - NOT YET IMPLEMENTED)
-STRIPE_SECRET_KEY=your_stripe_secret_key_here
-STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret_here
-
 # Set via Firebase CLI:
 firebase functions:config:set \
   gemini.api_key="YOUR_GEMINI_KEY" \
-  stripe.secret_key="YOUR_STRIPE_KEY" \
-  stripe.webhook_secret="YOUR_WEBHOOK_SECRET" \
   --project YOUR_PRODUCTION_PROJECT_ID
 
 # Deploy config
@@ -755,8 +749,6 @@ FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nXXXXXXXX\n-----END PRIVATE KE
 # EXTERNAL APIS
 # ==========================================
 GEMINI_API_KEY=your_gemini_api_key_here
-STRIPE_SECRET_KEY=your_stripe_secret_key_here
-STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret_here
 
 # ==========================================
 # APP CONFIG
