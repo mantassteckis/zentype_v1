@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useRef, useCallback, useState, useEffect } from "react"
+import { useRef, useCallback, useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -22,7 +22,7 @@ import { useKeyboardSound } from "@/hooks/useKeyboardSound"
 import type { SoundPackId } from "@/hooks/useKeyboardSound"
 // Removed Cloud Function imports - now using Next.js API route
 
-export default function TestPage(): JSX.Element | null {
+function TestPageContent(): JSX.Element | null {
   // Auth and user data
   const { user, profile, isLoading } = useAuth();
   
@@ -2103,4 +2103,20 @@ export default function TestPage(): JSX.Element | null {
   }
 
   return null;
+}
+
+// Wrap with Suspense boundary to fix Next.js 15 useSearchParams requirement
+export default function TestPage(): JSX.Element {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading test configuration...</p>
+        </div>
+      </div>
+    }>
+      <TestPageContent />
+    </Suspense>
+  );
 }
