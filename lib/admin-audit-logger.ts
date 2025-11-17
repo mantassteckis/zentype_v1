@@ -186,9 +186,12 @@ export async function logAdminAction(params: LogAdminActionParams): Promise<stri
     },
   };
   
+  // Remove undefined fields (Firestore doesn't accept undefined values)
+  const cleanedLogEntry = JSON.parse(JSON.stringify(logEntry));
+  
   try {
     // Write to Firestore
-    const docRef = await db.collection('adminAuditLog').add(logEntry);
+    const docRef = await db.collection('adminAuditLog').add(cleanedLogEntry);
     
     // Update the id field with Firestore document ID
     await docRef.update({ id: docRef.id });
