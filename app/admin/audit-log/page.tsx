@@ -25,6 +25,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { auth } from '@/lib/firebase/client';
 import {
   Select,
   SelectContent,
@@ -113,7 +114,19 @@ export default function AuditLogPage() {
       if (successOnly) params.append('successOnly', 'true');
       if (failedOnly) params.append('failedOnly', 'true');
       
-      const response = await fetch(`/api/v1/admin/audit-log?${params.toString()}`);
+      // Get current user's ID token for authentication
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error('Not authenticated');
+      }
+      
+      const idToken = await user.getIdToken();
+      
+      const response = await fetch(`/api/v1/admin/audit-log?${params.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+        },
+      });
       const data = await response.json();
       
       if (!response.ok) {
@@ -160,7 +173,19 @@ export default function AuditLogPage() {
       if (successOnly) params.append('successOnly', 'true');
       if (failedOnly) params.append('failedOnly', 'true');
       
-      const response = await fetch(`/api/v1/admin/audit-log?${params.toString()}`);
+      // Get current user's ID token for authentication
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error('Not authenticated');
+      }
+      
+      const idToken = await user.getIdToken();
+      
+      const response = await fetch(`/api/v1/admin/audit-log?${params.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+        },
+      });
       
       if (!response.ok) {
         const data = await response.json();

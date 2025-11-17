@@ -8,14 +8,12 @@
  * @created November 17, 2025
  */
 
-import { getFirestore } from 'firebase-admin/firestore';
+import { db } from '@/lib/firebase-admin';
 import {
   AdminAuditLogEntry,
   LogAdminActionParams,
   AuditChange,
 } from '@/lib/types/audit';
-
-const db = getFirestore();
 
 // ============================================
 // SENSITIVE FIELD DETECTION

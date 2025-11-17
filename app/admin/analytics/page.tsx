@@ -23,6 +23,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { auth } from '@/lib/firebase/client';
 import {
   ArrowLeft,
   Users,
@@ -85,7 +86,19 @@ export default function AnalyticsPage() {
       if (showLoading) setLoading(true);
       setError(null);
       
-      const response = await fetch('/api/v1/admin/analytics');
+      // Get current user's ID token for authentication
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error('Not authenticated');
+      }
+      
+      const idToken = await user.getIdToken();
+      
+      const response = await fetch('/api/v1/admin/analytics', {
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+        },
+      });
       const data = await response.json();
       
       if (!response.ok) {
