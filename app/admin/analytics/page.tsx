@@ -23,7 +23,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { auth } from '@/lib/firebase/client';
+import { useAdminAuth } from '@/hooks/useAdminAuth';
 import {
   ArrowLeft,
   Users,
@@ -60,6 +60,8 @@ interface AnalyticsData {
 
 export default function AnalyticsPage() {
   const router = useRouter();
+  const { user: adminUser, isLoading: authLoading } = useAdminAuth();
+  
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -67,45 +69,31 @@ export default function AnalyticsPage() {
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
 
   useEffect(() => {
-    // Check authentication before fetching analytics
-    const checkAuthAndFetch = async () => {
-      const user = auth.currentUser;
-      if (!user) {
-        console.warn('[AnalyticsPage] User not authenticated, redirecting to login');
-        router.push('/admin/login');
-        return;
-      }
-      await fetchAnalytics();
-    };
-    
-    checkAuthAndFetch();
-  }, []);
+    // Wait for auth to be ready before fetching analytics
+    if (!authLoading && adminUser) {
+      fetchAnalytics();
+    }
+  }, [authLoading, adminUser]);
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
-    if (!autoRefreshEnabled) return;
+    if (!autoRefreshEnabled || !adminUser) return;
     
     const interval = setInterval(() => {
       fetchAnalytics(false); // Silent refresh (no loading spinner)
     }, 30000); // 30 seconds
     
     return () => clearInterval(interval);
-  }, [autoRefreshEnabled]);
+  }, [autoRefreshEnabled, adminUser]);
 
   const fetchAnalytics = async (showLoading = true) => {
+    if (!adminUser) return; // Wait for auth to be ready
+    
     try {
       if (showLoading) setLoading(true);
       setError(null);
       
-      // Get current user's ID token for authentication
-      const user = auth.currentUser;
-      if (!user) {
-        console.warn('[AnalyticsPage] User not authenticated, redirecting to login');
-        router.push('/admin/login');
-        return;
-      }
-      
-      const idToken = await user.getIdToken();
+      const idToken = await adminUser.getIdToken();
       
       const response = await fetch('/api/v1/admin/analytics', {
         headers: {

@@ -25,7 +25,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { auth } from '@/lib/firebase/client';
+import { useAdminAuth } from '@/hooks/useAdminAuth';
 import {
   Select,
   SelectContent,
@@ -64,6 +64,8 @@ import {
 
 export default function AuditLogPage() {
   const router = useRouter();
+  const { user: adminUser, isLoading: authLoading } = useAdminAuth();
+  
   const [logs, setLogs] = useState<AdminAuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
@@ -102,21 +104,15 @@ export default function AuditLogPage() {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    // Check authentication before fetching logs
-    const checkAuthAndFetch = async () => {
-      const user = auth.currentUser;
-      if (!user) {
-        console.warn('[AuditLogPage] User not authenticated, redirecting to login');
-        router.push('/admin/login');
-        return;
-      }
-      await fetchLogs();
-    };
-    
-    checkAuthAndFetch();
-  }, [page, limit]);
+    // Wait for auth to be ready before fetching logs
+    if (!authLoading && adminUser) {
+      fetchLogs();
+    }
+  }, [page, limit, authLoading, adminUser]);
 
   const fetchLogs = async () => {
+    if (!adminUser) return; // Wait for auth to be ready
+    
     try {
       setLoading(true);
       setError(null);
@@ -138,14 +134,7 @@ export default function AuditLogPage() {
       if (failedOnly) params.append('failedOnly', 'true');
       
       // Get current user's ID token for authentication
-      const user = auth.currentUser;
-      if (!user) {
-        console.warn('[AuditLogPage] User not authenticated, redirecting to login');
-        router.push('/admin/login');
-        return;
-      }
-      
-      const idToken = await user.getIdToken();
+      const idToken = await adminUser.getIdToken();
       
       const response = await fetch(`/api/v1/admin/audit-log?${params.toString()}`, {
         headers: {
@@ -215,17 +204,11 @@ export default function AuditLogPage() {
   };
 
   const handleExportCsv = async () => {
+    if (!adminUser) return; // Wait for auth to be ready
+    
     try {
       setExporting(true);
       setError(null);
-      
-      // Check authentication first
-      const user = auth.currentUser;
-      if (!user) {
-        console.warn('[AuditLogPage] User not authenticated, redirecting to login');
-        router.push('/admin/login');
-        return;
-      }
       
       // Build query parameters (same filters as current view)
       const params = new URLSearchParams({
@@ -244,7 +227,7 @@ export default function AuditLogPage() {
       if (successOnly) params.append('successOnly', 'true');
       if (failedOnly) params.append('failedOnly', 'true');
       
-      const idToken = await user.getIdToken();
+      const idToken = await adminUser.getIdToken();
       
       const response = await fetch(`/api/v1/admin/audit-log?${params.toString()}`, {
         headers: {

@@ -1,65 +1,16 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Header } from "@/components/header"
 import { Shield, Users, CreditCard, Activity, Settings, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { auth } from "@/lib/firebase/client"
 import { signOut } from "firebase/auth"
-
-interface AdminData {
-  authorized: boolean
-  role?: 'admin' | 'superAdmin'
-  permissions?: {
-    admin: boolean
-    superAdmin: boolean
-    canDeleteUsers: boolean
-    canManageSubscriptions: boolean
-  }
-}
+import { useAdminAuth } from "@/hooks/useAdminAuth"
 
 export default function AdminDashboardPage() {
-  const [adminData, setAdminData] = useState<AdminData | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
-
-  useEffect(() => {
-    const verifyAdminAccess = async () => {
-      try {
-        const user = auth.currentUser
-        if (!user) {
-          console.log('[Admin Dashboard] No user authenticated')
-          router.push('/admin/login')
-          return
-        }
-
-        const idToken = await user.getIdToken()
-        
-        const response = await fetch('/api/v1/admin/auth/verify', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${idToken}`,
-          },
-        })
-
-        if (!response.ok) {
-          console.log('[Admin Dashboard] Admin verification failed')
-          router.push('/admin/login')
-          return
-        }
-
-        const data = await response.json()
-        setAdminData(data)
-        setIsLoading(false)
-      } catch (error) {
-        console.error('[Admin Dashboard] Verification error:', error)
-        router.push('/admin/login')
-      }
-    }
-
-    verifyAdminAccess()
-  }, [router])
+  const { user, adminData, isLoading, error } = useAdminAuth()
 
   const handleLogout = async () => {
     try {

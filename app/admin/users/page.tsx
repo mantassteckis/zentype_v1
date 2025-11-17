@@ -6,7 +6,7 @@ import { Header } from "@/components/header"
 import { Shield, Search, Filter, ChevronLeft, ChevronRight, Users, Crown, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { auth } from "@/lib/firebase/client"
+import { useAdminAuth } from "@/hooks/useAdminAuth"
 
 interface UserData {
   uid: string
@@ -45,6 +45,9 @@ interface PaginationData {
 }
 
 export default function AdminUsersPage() {
+  const router = useRouter()
+  const { user: adminUser, isLoading: authLoading } = useAdminAuth()
+  
   const [users, setUsers] = useState<UserData[]>([])
   const [pagination, setPagination] = useState<PaginationData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -52,20 +55,15 @@ export default function AdminUsersPage() {
   const [tierFilter, setTierFilter] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [error, setError] = useState("")
-  const router = useRouter()
 
   const fetchUsers = async (page: number, search: string, tier: string) => {
+    if (!adminUser) return // Wait for auth to be ready
+    
     try {
       setIsLoading(true)
       setError("")
 
-      const user = auth.currentUser
-      if (!user) {
-        router.push('/admin/login')
-        return
-      }
-
-      const idToken = await user.getIdToken()
+      const idToken = await adminUser.getIdToken()
       
       const params = new URLSearchParams({
         page: page.toString(),
@@ -101,8 +99,10 @@ export default function AdminUsersPage() {
   }
 
   useEffect(() => {
-    fetchUsers(currentPage, searchQuery, tierFilter)
-  }, [currentPage, searchQuery, tierFilter])
+    if (!authLoading && adminUser) {
+      fetchUsers(currentPage, searchQuery, tierFilter)
+    }
+  }, [currentPage, searchQuery, tierFilter, authLoading, adminUser])
 
   const handleSearch = (value: string) => {
     setSearchQuery(value)
@@ -126,19 +126,23 @@ export default function AdminUsersPage() {
     })
   }
 
-  if (isLoading && users.length === 0) {
+  if (authLoading || (isLoading && users.length === 0)) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
         <main className="container mx-auto px-4 pt-24 pb-16">
           <div className="text-center">
             <div className="inline-block w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p className="text-muted-foreground">Loading users...</p>
+            <p className="text-muted-foreground">
+              {authLoading ? 'Verifying admin access...' : 'Loading users...'}
+            </p>
           </div>
         </main>
       </div>
     )
   }
+  
+  if (!adminUser) return null // Redirecting...
 
   return (
     <div className="min-h-screen bg-background">
