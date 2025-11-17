@@ -90,55 +90,58 @@ export default function UserDetailPage() {
   const params = useParams()
   const uid = params.uid as string
 
-  useEffect(() => {
-    const fetchUserDetails = async () => {
-      try {
-        const user = auth.currentUser
-        if (!user) {
-          console.warn('[AdminUserDetail] No authenticated user', { uid })
-          router.push('/admin/login')
-          return
-        }
-
-        const idToken = await user.getIdToken()
-        console.info('[AdminUserDetail] Fetching user details', { uid })
-
-        const response = await fetch(`/api/v1/admin/users/${uid}`, {
-          headers: {
-            'Authorization': `Bearer ${idToken}`
-          }
-        })
-
-        if (response.status === 401 || response.status === 403) {
-          console.error('[AdminUserDetail] Unauthorized access', { status: response.status })
-          router.push('/admin/login')
-          return
-        }
-
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.message || 'Failed to fetch user details')
-        }
-
-        const data = await response.json()
-        console.info('[AdminUserDetail] User details loaded', { 
-          uid, 
-          hasProfile: !!data.profile,
-          hasSubscription: !!data.subscription 
-        })
-        setUserData(data)
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Unknown error'
-        console.error('[AdminUserDetail] Failed to fetch user details', { 
-          error: errorMessage,
-          uid 
-        })
-        setError(errorMessage)
-      } finally {
-        setIsLoading(false)
+  // Reusable function for fetching user details (called on mount and after operations)
+  const fetchUserDetails = async () => {
+    setIsLoading(true)
+    try {
+      const user = auth.currentUser
+      if (!user) {
+        console.warn('[AdminUserDetail] No authenticated user', { uid })
+        router.push('/admin/login')
+        return
       }
-    }
 
+      const idToken = await user.getIdToken()
+      console.info('[AdminUserDetail] Fetching user details', { uid })
+
+      const response = await fetch(`/api/v1/admin/users/${uid}`, {
+        headers: {
+          'Authorization': `Bearer ${idToken}`
+        }
+      })
+
+      if (response.status === 401 || response.status === 403) {
+        console.error('[AdminUserDetail] Unauthorized access', { status: response.status })
+        router.push('/admin/login')
+        return
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Failed to fetch user details')
+      }
+
+      const data = await response.json()
+      console.info('[AdminUserDetail] User details loaded', { 
+        uid, 
+        hasProfile: !!data.profile,
+        hasSubscription: !!data.subscription 
+      })
+      setUserData(data)
+      setError(null) // Clear any previous errors on successful load
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      console.error('[AdminUserDetail] Failed to fetch user details', { 
+        error: errorMessage,
+        uid 
+      })
+      setError(errorMessage)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
     fetchUserDetails()
   }, [uid, router])
 
@@ -189,9 +192,9 @@ export default function UserDetailPage() {
       const result = await response.json()
       
       if (result.success) {
-        alert('Profile updated successfully!')
-        // Refresh user data
-        window.location.reload()
+        console.log('[AdminUserDetail] Profile updated successfully', { uid })
+        await fetchUserDetails() // Silent data refresh - no page reload
+        alert('✅ Profile updated successfully!')
       } else {
         alert(`Failed to update profile: ${result.message}`)
       }
@@ -244,8 +247,9 @@ export default function UserDetailPage() {
       const result = await response.json()
       
       if (result.success) {
+        console.log('[AdminUserDetail] User promoted successfully', { uid, role })
+        await fetchUserDetails() // Silent data refresh - no page reload
         alert(result.message)
-        window.location.reload()
       } else {
         alert(`Failed to promote user: ${result.message}`)
       }
@@ -309,8 +313,9 @@ export default function UserDetailPage() {
       const result = await response.json()
       
       if (result.success) {
+        console.log('[AdminUserDetail] Permissions updated successfully', { uid, role })
+        await fetchUserDetails() // Silent data refresh - no page reload
         alert(result.message)
-        window.location.reload()
       } else {
         alert(`Failed to update permissions: ${result.message}`)
       }
@@ -364,8 +369,9 @@ export default function UserDetailPage() {
       const result = await response.json()
       
       if (result.success) {
+        console.log('[AdminUserDetail] Admin role removed successfully', { uid })
+        await fetchUserDetails() // Silent data refresh - no page reload
         alert(result.message)
-        window.location.reload()
       } else {
         alert(`Failed to remove admin role: ${result.message}`)
       }
@@ -419,8 +425,9 @@ export default function UserDetailPage() {
       const result = await response.json()
       
       if (result.success) {
-        alert(`Account ${action}ed successfully!`)
-        window.location.reload()
+        console.log('[AdminUserDetail] Account suspension toggled successfully', { uid, action })
+        await fetchUserDetails() // Silent data refresh - no page reload
+        alert(`✅ Account ${action}ed successfully!`)
       } else {
         alert(`Failed to ${action} account: ${result.message}`)
       }
@@ -519,8 +526,9 @@ export default function UserDetailPage() {
       const result = await response.json()
       
       if (result.success) {
-        alert(`Subscription tier updated to ${newTier}!`)
-        window.location.reload()
+        console.log('[AdminUserDetail] Subscription tier updated successfully', { uid, newTier })
+        await fetchUserDetails() // Silent data refresh - no page reload
+        alert(`✅ Subscription tier updated to ${newTier}!`)
       } else {
         alert(`Failed to update subscription tier: ${result.message}`)
       }
