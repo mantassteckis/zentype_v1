@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useRef, useCallback, useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -29,6 +29,10 @@ export default function TestPage(): JSX.Element | null {
   // Debug logging
   const debugLogger = useDebugLogger();
   
+  // Router and URL params
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
   // Correlation ID for request tracing
   const { correlationId, getHeaders } = useCorrelationId();
   
@@ -54,7 +58,6 @@ export default function TestPage(): JSX.Element | null {
   });
   
   // Core state management
-  const router = useRouter();
   const [view, setView] = useState<'config' | 'active' | 'results'>('config');
   const [selectedTime, setSelectedTime] = useState(60);
   const [textToType, setTextToType] = useState("");
@@ -74,7 +77,13 @@ export default function TestPage(): JSX.Element | null {
   const endTestRef = useRef<() => Promise<void>>();
 
   // Additional UI state for configuration
-  const [activeTab, setActiveTab] = useState("practice");
+  const [activeTab, setActiveTab] = useState(() => {
+    // Initialize from URL query parameter (for redirects from /test/simple)
+    const tabParam = searchParams.get('tab');
+    return (tabParam === 'simple' || tabParam === 'ai' || tabParam === 'practice') 
+      ? tabParam 
+      : 'practice';
+  });
   const [selectedDifficulty, setSelectedDifficulty] = useState("Medium");
   const [topic, setTopic] = useState("");
   const [currentTestId, setCurrentTestId] = useState<string | null>(null);
