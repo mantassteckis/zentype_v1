@@ -507,7 +507,7 @@ export default function UserDetailPage() {
       
       console.info('[AdminUserDetail] Updating subscription tier', { uid, newTier })
       
-      const response = await fetch(`/api/v1/admin/users/${uid}/subscription`, {
+      const response = await fetch(`/api/v1/admin/subscriptions/${uid}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${idToken}`,
