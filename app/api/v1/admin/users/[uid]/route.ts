@@ -47,23 +47,25 @@ export async function GET(
     const subscriptionData = subscriptionDoc.exists ? subscriptionDoc.data() : null
 
     // Fetch recent tests (last 10) from testResults collection
+    // Note: Removed orderBy to avoid Firestore index requirement - will sort client-side
     const recentTestsSnapshot = await db
       .collection('testResults')
       .where('userId', '==', uid)
-      .orderBy('completedAt', 'desc')
       .limit(10)
       .get()
 
-    const recentTests = recentTestsSnapshot.docs.map((doc) => {
-      const data = doc.data()
-      return {
-        id: doc.id,
-        mode: data.mode || 'Unknown',
-        wpm: data.wpm || 0,
-        accuracy: data.accuracy || 0,
-        completedAt: data.completedAt?.toDate?.()?.toISOString() || new Date().toISOString()
-      }
-    })
+    const recentTests = recentTestsSnapshot.docs
+      .map((doc) => {
+        const data = doc.data()
+        return {
+          id: doc.id,
+          mode: data.mode || 'Unknown',
+          wpm: data.wpm || 0,
+          accuracy: data.accuracy || 0,
+          completedAt: data.completedAt?.toDate?.()?.toISOString() || new Date().toISOString()
+        }
+      })
+      .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())
 
     // Construct enriched user object
     const enrichedUser = {
@@ -79,14 +81,15 @@ export async function GET(
       customClaims: authUser.customClaims || {},
 
       // Profile data (Firestore)
+      // Note: Profile uses nested stats object per FIRESTORE_SCHEMA
       profile: profileData
         ? {
-            username: profileData.username || '',
+            username: profileData.username || profileData.displayName || '',
             bio: profileData.bio || '',
-            globalRank: profileData.globalRank || 999999,
-            testsCompleted: profileData.testsCompleted || 0,
-            bestWPM: profileData.bestWPM || 0,
-            averageAccuracy: profileData.averageAccuracy || 0
+            globalRank: profileData.stats?.rank || profileData.globalRank || 999999,
+            testsCompleted: profileData.stats?.testsCompleted || profileData.testsCompleted || 0,
+            bestWPM: profileData.bestWpm || profileData.stats?.avgWpm || 0,
+            averageAccuracy: profileData.stats?.avgAcc || profileData.averageAccuracy || 0
           }
         : null,
 
