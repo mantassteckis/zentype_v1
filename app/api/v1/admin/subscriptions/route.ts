@@ -107,7 +107,9 @@ export async function GET(request: NextRequest) {
         ...data,
         // Calculate remaining tests for display
         aiTestsRemaining: data.tier === 'premium' ? 'unlimited' : 
-                          Math.max(0, 5 - (data.aiTestsUsedToday || 0))
+                          Math.max(0, 5 - (data.aiTestsUsedToday || 0)),
+        // Always include dailyLimit for display purposes
+        dailyLimit: data.tier === 'premium' ? 'unlimited' : 5
       });
     });
     
