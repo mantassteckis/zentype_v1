@@ -107,6 +107,11 @@ export default function TestPage(): JSX.Element | null {
     dailyLimit: number | 'unlimited';
   } | null>(null);
 
+  // Simple Mode state
+  const [simpleText, setSimpleText] = useState("");
+  const [simpleTextError, setSimpleTextError] = useState<string | null>(null);
+  const [isGeneratingSimple, setIsGeneratingSimple] = useState(false);
+
   // Client-side mount state to prevent hydration issues
   const [isMounted, setIsMounted] = useState(false);
 
@@ -744,6 +749,107 @@ export default function TestPage(): JSX.Element | null {
     }
   }, [user, topic, selectedDifficulty, selectedTime, debugLogger]);
 
+  // Simple Mode Test Generation Handler
+  const handleGenerateSimpleTest = useCallback(async () => {
+    console.log('[Simple Mode] Generate test clicked', {
+      textLength: simpleText.trim().length,
+      userId: user?.uid
+    });
+
+    if (!user) {
+      alert('Please sign in to generate tests');
+      return;
+    }
+
+    if (simpleText.trim().length < 50 || simpleText.trim().length > 5000) {
+      setSimpleTextError('Text must be between 50 and 5000 characters');
+      return;
+    }
+
+    setIsGeneratingSimple(true);
+    setAiTest(null);
+
+    try {
+      // Call the Cloud Function to generate simple test
+      const generateSimpleTest = httpsCallable(functions, 'generateSimpleTest');
+      const result = await generateSimpleTest({ text: simpleText.trim() });
+      
+      const data = result.data as { testId: string; wordCount: number; text: string; message: string };
+      
+      console.log('[Simple Mode] Test generated successfully', {
+        testId: data.testId,
+        wordCount: data.wordCount
+      });
+
+      // Create test object similar to AI-generated test
+      const generatedTest = {
+        id: data.testId,
+        text: data.text,
+        difficulty: 'custom',
+        category: 'simple_mode',
+        source: 'Simple Mode',
+        wordCount: data.wordCount,
+        timeLimit: Math.ceil(data.wordCount / 1.7), // Approximate reading time
+        saved: true
+      };
+
+      setAiTest(generatedTest);
+      
+      // Auto-select the test for better UX
+      setTextToType(generatedTest.text);
+      setCurrentTestId(generatedTest.id);
+      
+      // Refresh subscription status
+      if (user && subscriptionStatus?.tier === 'free') {
+        const idToken = await user.getIdToken();
+        const response = await fetch('/api/v1/user/subscription', {
+          headers: { 'Authorization': `Bearer ${idToken}` }
+        });
+        if (response.ok) {
+          const statusData = await response.json();
+          setSubscriptionStatus({
+            tier: statusData.tier,
+            aiTestsRemaining: statusData.aiTestsRemaining,
+            dailyLimit: statusData.dailyLimit
+          });
+          console.log('[Simple Mode] Subscription status refreshed', {
+            remaining: statusData.aiTestsRemaining
+          });
+        }
+      }
+
+    } catch (error: any) {
+      console.error('[Simple Mode] Generation error:', error);
+      
+      // Handle subscription limit error
+      if (error?.code === 'functions/resource-exhausted') {
+        // Refresh subscription status
+        if (user) {
+          const idToken = await user.getIdToken();
+          const response = await fetch('/api/v1/user/subscription', {
+            headers: { 'Authorization': `Bearer ${idToken}` }
+          });
+          if (response.ok) {
+            const statusData = await response.json();
+            setSubscriptionStatus({
+              tier: statusData.tier,
+              aiTestsRemaining: statusData.aiTestsRemaining,
+              dailyLimit: statusData.dailyLimit
+            });
+          }
+        }
+        alert('Daily AI test limit reached (5 tests/day for free tier).\n\nUpgrade to Premium for unlimited AI tests!\n\nVisit the Pricing page to learn more.');
+      } else if (error?.code === 'functions/unauthenticated') {
+        alert('Please log in to generate tests.');
+        router.push('/login');
+      } else {
+        alert(error.message || 'Failed to generate test. Please try again.');
+      }
+    } finally {
+      setIsGeneratingSimple(false);
+    }
+  }, [user, simpleText, subscriptionStatus, router]);
+
   // Enhanced AI Test Selection Handler with tracking
   const handleAiTestSelection = useCallback(() => {
     const flowId = debugLogger.startFlow('AI_GENERATION', 'AI Test Selection Process', {
@@ -1300,8 +1406,12 @@ export default function TestPage(): JSX.Element | null {
               <Tabs value={activeTab} onValueChange={(value) => {
                 setActiveTab(value);
                 if (value === "practice") setTopic("");
+                if (value === "simple") {
+                  setSimpleText("");
+                  setSimpleTextError(null);
+                }
               }}>
-                <TabsList className="grid w-full grid-cols-2 bg-accent">
+                <TabsList className="grid w-full grid-cols-3 bg-accent">
                   <TabsTrigger
                     value="practice"
                     className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
@@ -1313,6 +1423,12 @@ export default function TestPage(): JSX.Element | null {
                     className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
                   >
                     AI-Generated Test
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="simple"
+                    className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                  >
+                    Simple Mode
                   </TabsTrigger>
                 </TabsList>
                 <TabsContent value="practice" className="space-y-6">
@@ -1633,6 +1749,128 @@ export default function TestPage(): JSX.Element | null {
                     )}
                   </div>
                 </TabsContent>
+                
+                {/* Simple Mode Tab */}
+                <TabsContent value="simple" className="space-y-6">
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="simpleText" className="text-foreground text-lg mb-3 block">
+                        <Type className="inline mr-2 h-5 w-5" />
+                        Paste Your Text
+                      </Label>
+                      <textarea
+                        id="simpleText"
+                        placeholder="Paste or type your text here... (50-5000 characters)"
+                        value={simpleText}
+                        onChange={(e) => {
+                          const text = e.target.value;
+                          setSimpleText(text);
+                          
+                          // Real-time validation
+                          if (text.trim().length < 50) {
+                            setSimpleTextError(text.trim().length > 0 ? "Text must be at least 50 characters" : null);
+                          } else if (text.trim().length > 5000) {
+                            setSimpleTextError("Text must be less than 5000 characters");
+                          } else {
+                            setSimpleTextError(null);
+                          }
+                        }}
+                        className="w-full h-48 p-4 rounded-lg bg-accent border border-border text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                      
+                      {/* Character/Word Counter */}
+                      <div className="flex items-center justify-between mt-2 text-sm">
+                        <div className="flex items-center gap-4">
+                          <span className={simpleText.trim().length > 5000 ? "text-destructive font-semibold" : "text-muted-foreground"}>
+                            {simpleText.trim().length} / 5000 characters
+                          </span>
+                          <span className="text-muted-foreground">
+                            {simpleText.trim().split(/\s+/).filter(w => w.length > 0).length} words
+                          </span>
+                        </div>
+                        {simpleText.trim().length >= 50 && simpleText.trim().length <= 5000 && (
+                          <span className="text-green-600 font-medium">✓ Ready to generate</span>
+                        )}
+                        {simpleTextError && (
+                          <span className="text-destructive font-medium">⚠ {simpleTextError}</span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Subscription Status Display */}
+                    {subscriptionStatus && subscriptionStatus.tier === 'free' && (
+                      <div className="p-3 rounded-lg bg-accent border border-border">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Zap className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm text-foreground">
+                              {subscriptionStatus.aiTestsRemaining === 0 ? (
+                                <span className="text-destructive font-semibold">No AI tests remaining today</span>
+                              ) : (
+                                <>
+                                  <span className="font-semibold">{subscriptionStatus.aiTestsRemaining}</span>
+                                  {' '}of {subscriptionStatus.dailyLimit} AI tests remaining today
+                                </>
+                              )}
+                            </span>
+                          </div>
+                          <a 
+                            href="/pricing" 
+                            className="text-sm text-primary hover:underline font-medium"
+                          >
+                            Upgrade to Premium
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {subscriptionStatus && subscriptionStatus.tier === 'premium' && (
+                      <div className="p-3 rounded-lg bg-gradient-to-r from-purple-600/10 to-blue-600/10 border border-purple-600/20">
+                        <div className="flex items-center gap-2">
+                          <Zap className="h-4 w-4 text-purple-600" />
+                          <span className="text-sm text-foreground font-medium">
+                            ✨ Premium: Unlimited AI tests
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Info Box */}
+                    <div className="p-4 rounded-lg bg-muted border border-border">
+                      <h3 className="font-semibold text-foreground mb-2">How Simple Mode Works:</h3>
+                      <ul className="space-y-1 text-sm text-muted-foreground">
+                        <li>• Paste any text between 50-5000 characters</li>
+                        <li>• No AI processing (faster generation, no cost)</li>
+                        <li>• Text is cleaned and formatted automatically</li>
+                        <li>• Counts against your daily AI test limit</li>
+                        <li>• Perfect for practicing with specific content</li>
+                      </ul>
+                    </div>
+                    
+                    {/* Generate Button */}
+                    <Button
+                      onClick={handleGenerateSimpleTest}
+                      disabled={
+                        simpleText.trim().length < 50 || 
+                        simpleText.trim().length > 5000 || 
+                        isGeneratingSimple ||
+                        (subscriptionStatus?.tier === 'free' && subscriptionStatus?.aiTestsRemaining === 0)
+                      }
+                      className="w-full bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isGeneratingSimple ? (
+                        <span className="flex items-center gap-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          Generating...
+                        </span>
+                      ) : (subscriptionStatus?.tier === 'free' && subscriptionStatus?.aiTestsRemaining === 0) ? (
+                        'Daily Limit Reached'
+                      ) : (
+                        'Generate Test'
+                      )}
+                    </Button>
+                  </div>
+                </TabsContent>
               </Tabs>
               <Button
                 onClick={() => {
@@ -1644,18 +1882,19 @@ export default function TestPage(): JSX.Element | null {
                     hasAiTest: !!aiTest,
                     aiTestId: aiTest?.id,
                     selectedTestId: selectedTestId || 'none',
-                    shouldBeDisabled: (activeTab === 'practice' && !selectedTestId) || (activeTab === 'ai' && !aiTest),
+                    shouldBeDisabled: (activeTab === 'practice' && !selectedTestId) || (activeTab === 'ai' && !aiTest) || (activeTab === 'simple' && !aiTest),
                     timestamp: new Date().toISOString()
                   });
                   startTest();
                 }}
                 disabled={
                   (activeTab === 'practice' && !selectedTestId) || 
-                  (activeTab === 'ai' && !aiTest)
+                  (activeTab === 'ai' && !aiTest) ||
+                  (activeTab === 'simple' && !aiTest)
                 }
                 className={`
                   w-full text-xl py-6
-                  ${((activeTab === 'practice' && !selectedTestId) || (activeTab === 'ai' && !aiTest))
+                  ${((activeTab === 'practice' && !selectedTestId) || (activeTab === 'ai' && !aiTest) || (activeTab === 'simple' && !aiTest))
                     ? 'bg-muted text-muted-foreground cursor-not-allowed'
                     : 'bg-primary hover:bg-primary/90 text-primary-foreground'
                   }
@@ -1664,6 +1903,8 @@ export default function TestPage(): JSX.Element | null {
                 {activeTab === 'practice' && !selectedTestId 
                   ? 'Select a test to begin'
                   : activeTab === 'ai' && !aiTest
+                  ? 'Generate a test to begin'
+                  : activeTab === 'simple' && !aiTest
                   ? 'Generate a test to begin'
                   : 'Start Typing'
                 }
