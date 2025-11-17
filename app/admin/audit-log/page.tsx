@@ -79,9 +79,9 @@ export default function AuditLogPage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
-  const [actionType, setActionType] = useState<string>('');
-  const [actionCategory, setActionCategory] = useState<string>('');
-  const [severity, setSeverity] = useState<string>('');
+  const [actionType, setActionType] = useState<string>('all');
+  const [actionCategory, setActionCategory] = useState<string>('all');
+  const [severity, setSeverity] = useState<string>('all');
   const [targetUserEmail, setTargetUserEmail] = useState('');
   const [successOnly, setSuccessOnly] = useState(false);
   const [failedOnly, setFailedOnly] = useState(false);
@@ -107,9 +107,9 @@ export default function AuditLogPage() {
       if (startDate) params.append('startDate', startDate);
       if (endDate) params.append('endDate', endDate);
       if (adminEmail) params.append('adminEmail', adminEmail);
-      if (actionType) params.append('actionType', actionType);
-      if (actionCategory) params.append('actionCategory', actionCategory);
-      if (severity) params.append('severity', severity);
+      if (actionType && actionType !== 'all') params.append('actionType', actionType);
+      if (actionCategory && actionCategory !== 'all') params.append('actionCategory', actionCategory);
+      if (severity && severity !== 'all') params.append('severity', severity);
       if (targetUserEmail) params.append('targetUserEmail', targetUserEmail);
       if (successOnly) params.append('successOnly', 'true');
       if (failedOnly) params.append('failedOnly', 'true');
@@ -231,9 +231,9 @@ export default function AuditLogPage() {
     setStartDate('');
     setEndDate('');
     setAdminEmail('');
-    setActionType('');
-    setActionCategory('');
-    setSeverity('');
+    setActionType('all');
+    setActionCategory('all');
+    setSeverity('all');
     setTargetUserEmail('');
     setSuccessOnly(false);
     setFailedOnly(false);
@@ -394,7 +394,7 @@ export default function AuditLogPage() {
                   <SelectValue placeholder="All actions" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All actions</SelectItem>
+                  <SelectItem value="all">All actions</SelectItem>
                   {Object.values(AuditActionType).map(type => (
                     <SelectItem key={type} value={type}>
                       {type.replace(/_/g, ' ')}
@@ -412,7 +412,7 @@ export default function AuditLogPage() {
                   <SelectValue placeholder="All categories" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All categories</SelectItem>
+                  <SelectItem value="all">All categories</SelectItem>
                   {Object.values(AuditCategory).map(cat => (
                     <SelectItem key={cat} value={cat}>
                       {cat.replace(/_/g, ' ')}
@@ -430,7 +430,7 @@ export default function AuditLogPage() {
                   <SelectValue placeholder="All severities" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All severities</SelectItem>
+                  <SelectItem value="all">All severities</SelectItem>
                   {Object.values(AuditSeverity).map(sev => (
                     <SelectItem key={sev} value={sev}>
                       {sev}
@@ -538,34 +538,34 @@ export default function AuditLogPage() {
                         </TableCell>
                         <TableCell>
                           <div className="text-sm">
-                            <div className="font-medium">{log.actor.email}</div>
+                            <div className="font-medium">{log.actor?.email || 'Unknown'}</div>
                             <div className="text-xs text-muted-foreground">
-                              {log.actor.role}
+                              {log.actor?.role || 'N/A'}
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="text-sm">
                             <div className="font-medium">
-                              {log.action.type.replace(/_/g, ' ')}
+                              {log.action?.type?.replace(/_/g, ' ') || 'Unknown Action'}
                             </div>
                             <div className="text-xs text-muted-foreground">
-                              {log.action.description}
+                              {log.action?.description || ''}
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={getSeverityBadgeVariant(log.action.severity) as any}>
-                            {getSeverityIcon(log.action.severity)}
-                            {log.action.severity}
+                          <Badge variant={getSeverityBadgeVariant(log.action?.severity) as any}>
+                            {getSeverityIcon(log.action?.severity)}
+                            {log.action?.severity || 'UNKNOWN'}
                           </Badge>
                         </TableCell>
                         <TableCell>
                           {log.target ? (
                             <div className="text-sm">
-                              <div className="font-medium">{log.target.email}</div>
+                              <div className="font-medium">{log.target.email || 'Unknown'}</div>
                               <div className="text-xs text-muted-foreground">
-                                {log.target.type}
+                                {log.target.type || 'N/A'}
                               </div>
                             </div>
                           ) : (
@@ -573,7 +573,7 @@ export default function AuditLogPage() {
                           )}
                         </TableCell>
                         <TableCell>
-                          {log.result.success ? (
+                          {log.result?.success ? (
                             <Badge variant="outline" className="border-green-500 text-green-600">
                               Success
                             </Badge>
