@@ -6,6 +6,8 @@
 # next.js
 /.next/
 /out/
+/.next/analyze/
+bundle-stats.json
 
 # production
 /build
@@ -41,6 +43,10 @@ ui-debug.log
 *.log
 *.jsonl
 zentype-debug-*.json
+
+# Optimization Reports
+/docs/optimization/*.html
+/docs/optimization/*.report.html
 
 # IDE and Editor files
 .vscode/

@@ -494,7 +494,6 @@ function TestPageContent(): JSX.Element | null {
     debugLogger.addToFlow(flowId, 'info', 'User initiated AI test generation', {
       hasUser: !!user,
       topic: topic.trim(),
-      userInterests: profile?.interests || [],
       selectedDifficulty,
       selectedTime
     }, 'app/test/page.tsx:handleGenerateAiTest');
@@ -523,7 +522,6 @@ function TestPageContent(): JSX.Element | null {
     debugLogger.addToFlow(flowId, 'info', 'Input validation passed, proceeding with generation', {
       userId: user.uid,
       topicLength: topic.trim().length,
-      userInterests: profile?.interests || [],
       difficulty: selectedDifficulty,
       timeLimit: selectedTime
     });
@@ -539,8 +537,7 @@ function TestPageContent(): JSX.Element | null {
         userId: user.uid,
         autoSaveAiTests,
         hasProfile: !!profile,
-        hasSettings: !!profile?.settings,
-        userInterests: profile?.interests || []
+        hasSettings: !!profile?.settings
       });
 
       // Prepare request data
@@ -548,14 +545,12 @@ function TestPageContent(): JSX.Element | null {
         topic: topic.trim(),
         difficulty: selectedDifficulty,
         timeLimit: selectedTime,
-        saveTest: autoSaveAiTests,
-        userInterests: profile?.interests || []
+        saveTest: autoSaveAiTests
       };
 
       debugLogger.addToFlow(flowId, 'info', 'Request data prepared for Cloud Function', {
         requestDataKeys: Object.keys(requestData),
         topicLength: requestData.topic.length,
-        hasUserInterests: requestData.userInterests.length > 0,
         saveTest: requestData.saveTest
       });
 
@@ -566,8 +561,7 @@ function TestPageContent(): JSX.Element | null {
         functionName: 'generateAiTest',
         topic: requestData.topic,
         difficulty: requestData.difficulty,
-        timeLimit: requestData.timeLimit,
-        userInterestsCount: requestData.userInterests.length
+        timeLimit: requestData.timeLimit
       });
 
       // Log API call

@@ -1,20 +1,15 @@
 # ZenType
 
-*Automatically synced with your [v0.app](https://v0.app) deployments*
+[![Deployed on Firebase](https://img.shields.io/badge/Deployed%20on-Firebase-orange?style=for-the-badge&logo=firebase)](https://zentype-v1--solotype-23c1f.europe-west4.hosted.app/)
+[![Built with Next.js](https://img.shields.io/badge/Built%20with-Next.js%2015-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/steckismantas0-gmailcoms-projects/v0-zen-type)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.app-black?style=for-the-badge)](https://v0.app/chat/projects/s2qmeRrWrD6)
+## 🚀 Live Production Site
+
+**https://zentype-v1--solotype-23c1f.europe-west4.hosted.app/**
 
 ## Overview
 
-This repository will stay in sync with your deployed chats on [v0.app](https://v0.app).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.app](https://v0.app).
-
-## Deployment
-
-Your project is live at:
-
-**https://zentype-v1--solotype-23c1f.europe-west4.hosted.app/**
+ZenType is a production-ready typing platform with AI-powered test generation, real-time analytics, and a comprehensive admin panel.
 
 ## About ZenType
 

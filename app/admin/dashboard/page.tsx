@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import { Header } from "@/components/header"
-import { Shield, Users, CreditCard, Activity, Settings, LogOut } from "lucide-react"
+import { Shield, Users, CreditCard, Settings, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { auth } from "@/lib/firebase/client"
 import { signOut } from "firebase/auth"
@@ -87,25 +87,8 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* Phase 5 Analytics & Audit Links */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <div className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-lg p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <Activity className="w-8 h-8 text-blue-500" />
-              <div>
-                <h3 className="text-lg font-semibold text-foreground">Analytics Dashboard</h3>
-                <p className="text-sm text-muted-foreground">Real-time platform metrics</p>
-              </div>
-            </div>
-            <Button 
-              onClick={() => router.push('/admin/analytics')}
-              className="w-full"
-              variant="default"
-            >
-              View Analytics →
-            </Button>
-          </div>
-
+        {/* Audit Log Link */}
+        <div className="mb-8">
           <div className="bg-gradient-to-br from-amber-500/10 to-red-500/10 border border-amber-500/20 rounded-lg p-6">
             <div className="flex items-center gap-3 mb-4">
               <Settings className="w-8 h-8 text-amber-500" />
