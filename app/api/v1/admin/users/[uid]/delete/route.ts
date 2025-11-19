@@ -24,23 +24,24 @@ import {
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { uid: string } }
+  { params }: { params: Promise<{ uid: string }> }  // ✅ Next.js 15: params is Promise-based
 ) {
   try {
+    // Await params (Next.js 15 requirement)
+    const { uid } = await params
+
     // Verify admin authorization with canDeleteUsers permission
     const adminVerification = await requirePermission(request, 'canDeleteUsers')
     if (!adminVerification.authorized) {
       console.error('[AdminUserDeleteAPI] Unauthorized access attempt', {
         adminUserId: adminVerification.userId,
-        targetUid: params.uid
+        targetUid: uid
       })
       return NextResponse.json(
         { success: false, message: 'Unauthorized: Admin with canDeleteUsers permission required' },
         { status: 403 }
       )
     }
-
-    const { uid } = params
 
     console.info('[AdminUserDeleteAPI] Initiating user deletion', {
       adminUserId: adminVerification.userId,
@@ -152,13 +153,15 @@ export async function DELETE(
     })
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const { uid } = await params  // Await params in catch block too
     console.error('[AdminUserDeleteAPI] Error deleting user', {
       error: errorMessage,
-      uid: params.uid
+      uid
     })
 
     // Log failed attempt
     try {
+      const { uid: targetUid } = await params  // Await params for audit logging
       const adminVerification = await requirePermission(request, 'canDeleteUsers')
       if (adminVerification.authorized) {
         await logAdminAction({
@@ -169,7 +172,7 @@ export async function DELETE(
           actionCategory: AuditCategory.USER_MANAGEMENT,
           actionSeverity: AuditSeverity.ERROR,
           actionDescription: 'Failed to delete user account',
-          targetUserId: params.uid,
+          targetUserId: targetUid,
           ipAddress: getIpAddress(request),
           userAgent: getUserAgent(request),
           apiEndpoint: request.url,

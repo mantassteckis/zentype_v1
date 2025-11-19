@@ -25,23 +25,23 @@ import {
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { uid: string } }
+  { params }: { params: Promise<{ uid: string }> }
 ) {
   try {
+    const { uid } = await params
+    
     // Verify admin authorization with canDeleteUsers permission
     const adminVerification = await requirePermission(request, 'canDeleteUsers')
     if (!adminVerification.authorized) {
       console.error('[AdminUserSuspendAPI] Unauthorized access attempt', {
         adminUserId: adminVerification.userId,
-        targetUid: params.uid
+        targetUid: uid
       })
       return NextResponse.json(
         { success: false, message: 'Unauthorized: Admin with canDeleteUsers permission required' },
         { status: 403 }
       )
     }
-
-    const { uid } = params
     const body = await request.json()
     const { disabled, reason } = body
 
@@ -165,9 +165,10 @@ export async function POST(
     })
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const { uid } = await params
     console.error('[AdminUserSuspendAPI] Error updating suspension status', {
       error: errorMessage,
-      uid: params.uid
+      uid
     })
 
     // Log failed attempt
@@ -183,7 +184,7 @@ export async function POST(
           actionCategory: AuditCategory.USER_MANAGEMENT,
           actionSeverity: AuditSeverity.ERROR,
           actionDescription: 'Failed to update account suspension status',
-          targetUserId: params.uid,
+          targetUserId: uid,
           ipAddress: getIpAddress(request),
           userAgent: getUserAgent(request),
           apiEndpoint: request.url,

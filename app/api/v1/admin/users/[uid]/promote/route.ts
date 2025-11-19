@@ -29,23 +29,23 @@ import {
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { uid: string } }
+  { params }: { params: Promise<{ uid: string }> }
 ) {
   try {
+    const { uid } = await params
+    
     // Verify super admin authorization
     const adminVerification = await requireSuperAdmin(request)
     if (!adminVerification.authorized) {
       console.error('[AdminUserPromoteAPI] Unauthorized access attempt', {
         adminUserId: adminVerification.userId,
-        targetUid: params.uid
+        targetUid: uid
       })
       return NextResponse.json(
         { success: false, message: 'Unauthorized: Super Admin access required' },
         { status: 403 }
       )
     }
-
-    const { uid } = params
     const body = await request.json()
     const { role, permissions } = body
 
@@ -150,9 +150,10 @@ export async function POST(
     })
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const { uid } = await params
     console.error('[AdminUserPromoteAPI] Error promoting user', {
       error: errorMessage,
-      uid: params.uid
+      uid
     })
 
     // Log failed attempt
@@ -167,7 +168,7 @@ export async function POST(
           actionCategory: AuditCategory.PERMISSIONS,
           actionSeverity: AuditSeverity.ERROR,
           actionDescription: 'Failed to promote user',
-          targetUserId: params.uid,
+          targetUserId: uid,
           ipAddress: getIpAddress(request),
           userAgent: getUserAgent(request),
           apiEndpoint: request.url,
@@ -197,23 +198,23 @@ export async function POST(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { uid: string } }
+  { params }: { params: Promise<{ uid: string }> }
 ) {
   try {
+    const { uid } = await params
+    
     // Verify super admin authorization
     const adminVerification = await requireSuperAdmin(request)
     if (!adminVerification.authorized) {
       console.error('[AdminUserDemoteAPI] Unauthorized access attempt', {
         adminUserId: adminVerification.userId,
-        targetUid: params.uid
+        targetUid: uid
       })
       return NextResponse.json(
         { success: false, message: 'Unauthorized: Super Admin access required' },
         { status: 403 }
       )
     }
-
-    const { uid } = params
 
     console.info('[AdminUserDemoteAPI] Demoting user to regular status', {
       adminUserId: adminVerification.userId,
@@ -342,9 +343,10 @@ export async function DELETE(
     })
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const { uid } = await params
     console.error('[AdminUserDemoteAPI] Error demoting user', {
       error: errorMessage,
-      uid: params.uid
+      uid
     })
 
     // Log failed attempt
@@ -359,7 +361,7 @@ export async function DELETE(
           actionCategory: AuditCategory.PERMISSIONS,
           actionSeverity: AuditSeverity.ERROR,
           actionDescription: 'Failed to demote user',
-          targetUserId: params.uid,
+          targetUserId: uid,
           ipAddress: getIpAddress(request),
           userAgent: getUserAgent(request),
           apiEndpoint: request.url,

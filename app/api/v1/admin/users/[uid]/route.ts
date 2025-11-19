@@ -14,23 +14,23 @@ import {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { uid: string } }
+  { params }: { params: Promise<{ uid: string }> }
 ) {
   try {
+    const { uid } = await params
+    
     // Verify admin authorization
     const adminVerification = await requireAdmin(request)
     if (!adminVerification.authorized) {
       console.error('[AdminUserDetailAPI] Unauthorized access attempt', {
         adminUserId: adminVerification.userId,
-        targetUid: params.uid
+        targetUid: uid
       })
       return NextResponse.json(
         { success: false, message: 'Unauthorized: Admin access required' },
         { status: 403 }
       )
     }
-
-    const { uid } = params
 
     console.info('[AdminUserDetailAPI] Fetching user details', {
       adminUserId: adminVerification.userId,
@@ -141,9 +141,10 @@ export async function GET(
     })
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const { uid } = await params
     console.error('[AdminUserDetailAPI] Error fetching user details', {
       error: errorMessage,
-      uid: params.uid
+      uid
     })
 
     return NextResponse.json(
@@ -164,23 +165,23 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { uid: string } }
+  { params }: { params: Promise<{ uid: string }> }
 ) {
   try {
+    const { uid } = await params
+    
     // Verify admin authorization
     const adminVerification = await requireAdmin(request)
     if (!adminVerification.authorized) {
       console.error('[AdminUserEditAPI] Unauthorized access attempt', {
         adminUserId: adminVerification.userId,
-        targetUid: params.uid
+        targetUid: uid
       })
       return NextResponse.json(
         { success: false, message: 'Unauthorized: Admin access required' },
         { status: 403 }
       )
     }
-
-    const { uid } = params
     const body = await request.json()
     const { email, displayName, username, bio } = body
 
@@ -313,9 +314,10 @@ export async function PUT(
     })
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const { uid } = await params
     console.error('[AdminUserEditAPI] Error updating user profile', {
       error: errorMessage,
-      uid: params.uid
+      uid
     })
 
     // Log failed attempt
@@ -330,7 +332,7 @@ export async function PUT(
           actionCategory: AuditCategory.USER_MANAGEMENT,
           actionSeverity: AuditSeverity.ERROR,
           actionDescription: 'Failed to update user profile',
-          targetUserId: params.uid,
+          targetUserId: uid,
           ipAddress: getIpAddress(request),
           userAgent: getUserAgent(request),
           apiEndpoint: request.url,

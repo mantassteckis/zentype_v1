@@ -7,7 +7,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth, db } from '@/lib/firebase-admin';
+import { db } from '@/lib/firebase-admin';
+import { getAuth } from 'firebase-admin/auth';
 
 /**
  * GET /api/v1/user/subscription
