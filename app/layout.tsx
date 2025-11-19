@@ -19,21 +19,21 @@ import { DebugProvider } from "@/context/DebugProvider"
 import { EnhancedDebugPanel } from "@/components/debug/EnhancedDebugPanel"
 import { CookieConsentBanner } from "@/components/privacy/cookie-consent-banner"
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: 'swap' })
 
 // Monospaced fonts for coding/serious typing
-const firaCode = Fira_Code({ subsets: ["latin"], variable: "--font-fira-code" })
-const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains-mono" })
-const sourceCodePro = Source_Code_Pro({ subsets: ["latin"], variable: "--font-source-code-pro" })
-const robotoMono = Roboto_Mono({ subsets: ["latin"], variable: "--font-roboto-mono" })
-const ubuntuMono = Ubuntu_Mono({ subsets: ["latin"], weight: ["400", "700"], variable: "--font-ubuntu-mono" })
+const firaCode = Fira_Code({ subsets: ["latin"], variable: "--font-fira-code", display: 'swap' })
+const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains-mono", display: 'swap' })
+const sourceCodePro = Source_Code_Pro({ subsets: ["latin"], variable: "--font-source-code-pro", display: 'swap' })
+const robotoMono = Roboto_Mono({ subsets: ["latin"], variable: "--font-roboto-mono", display: 'swap' })
+const ubuntuMono = Ubuntu_Mono({ subsets: ["latin"], weight: ["400", "700"], variable: "--font-ubuntu-mono", display: 'swap' })
 
 // Decorative fonts for fun/stylistic typing
-const playfairDisplay = Playfair_Display({ subsets: ["latin"], variable: "--font-playfair-display" })
-const lobster = Lobster({ subsets: ["latin"], weight: "400", variable: "--font-lobster" })
-const pacifico = Pacifico({ subsets: ["latin"], weight: "400", variable: "--font-pacifico" })
-const merriweather = Merriweather({ subsets: ["latin"], weight: ["400", "700"], variable: "--font-merriweather" })
-const righteous = Righteous({ subsets: ["latin"], weight: "400", variable: "--font-righteous" })
+const playfairDisplay = Playfair_Display({ subsets: ["latin"], variable: "--font-playfair-display", display: 'swap' })
+const lobster = Lobster({ subsets: ["latin"], weight: "400", variable: "--font-lobster", display: 'swap' })
+const pacifico = Pacifico({ subsets: ["latin"], weight: "400", variable: "--font-pacifico", display: 'swap' })
+const merriweather = Merriweather({ subsets: ["latin"], weight: ["400", "700"], variable: "--font-merriweather", display: 'swap' })
+const righteous = Righteous({ subsets: ["latin"], weight: "400", variable: "--font-righteous", display: 'swap' })
 
 export const metadata = {
   title: "ZenType - Find Your Flow. Master Your Typing.",
