@@ -752,6 +752,15 @@ typescript: {
 - Removing console.logs would break production logging
 - Keep existing infrastructure
 
+**OPT-36: Exclude Separate Package Directories from Root tsconfig.json** ⚠️ **CRITICAL**
+- Phase 6 enabled strict TypeScript but didn't exclude `functions/` directory
+- Root tsconfig.json had `"**/*.ts"` which compiled `functions/src/config.ts`
+- `functions/` has separate package.json with its own dependencies (e.g., dotenv)
+- Next.js tried to resolve functions' imports from root package.json → build failed
+- **Solution:** Added `"functions"` to tsconfig.json exclude array
+- **Lesson:** Always exclude directories with separate package.json from root tsconfig
+- **Reference:** ERROR-OPT-036 in optimization.errors.md
+
 #### Success Criteria Met:
 - ✅ Compression verified and documented
 - ✅ Caching strategy documented

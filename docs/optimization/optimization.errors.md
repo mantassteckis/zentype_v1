@@ -115,14 +115,106 @@ const callable = httpsCallable(functions, 'functionName');
 
 ## 🚨 OPTIMIZATION-SPECIFIC ERRORS
 
-### ERROR-OPT-001: [Placeholder - No Errors Yet]
+### ERROR-OPT-036: Next.js TypeScript Compiling Firebase Functions Directory
+**Date:** 2025-11-19  
+**Phase:** Post-Phase 6 (Production Deployment)  
+**Severity:** CRITICAL  
+**Status:** ✅ RESOLVED
+
+**Description:**
+Firebase App Hosting production build failed with TypeScript error: `Cannot find module 'dotenv'`. The error occurred when Next.js TypeScript compilation attempted to compile `functions/src/config.ts`, which imports `dotenv` from the separate `functions/package.json`.
+
+**Steps to Reproduce:**
+1. Enable strict TypeScript checks (`ignoreBuildErrors: false`) in Phase 6
+2. Deploy to Firebase App Hosting
+3. Build fails during Next.js compilation with dotenv import error
+
+**Expected Behavior:**
+- Next.js should only compile the Next.js app directory and its own code
+- Firebase Functions directory should be compiled independently with its own tsconfig.json
+- Production build should succeed
+
+**Actual Behavior:**
+- Next.js TypeScript compiler included `functions/` directory due to `"**/*.ts"` glob in root tsconfig.json
+- Attempted to resolve `dotenv` import from root `package.json` (doesn't exist there)
+- Build failed with: `Type error: Cannot find module 'dotenv' or its corresponding type declarations`
+
+**Root Cause:**
+Phase 6 enabled strict TypeScript checks but failed to exclude the `functions/` directory from Next.js compilation. The root `tsconfig.json` had:
+
+```json
+"include": ["**/*.ts", "**/*.tsx", ...],
+"exclude": ["node_modules"]  // ❌ Missing "functions"
+```
+
+The `"**/*.ts"` glob matched `functions/src/config.ts`, causing Next.js to try compiling Firebase Functions code.
+
+**Impact:**
+- ❌ All Firebase App Hosting deployments failed
+- ❌ Production builds blocked
+- ❌ Zero user impact (caught before deployment)
+- ⚠️ Phase 6 and Phase 7 documentation commits still deployed (docs-only changes)
+
+**Solution Applied:**
+```json
+// tsconfig.json
+"exclude": [
+  "node_modules",
+  "functions"  // ✅ Added - excludes Firebase Functions from Next.js compilation
+]
+```
+
+**Verification:**
+- [x] Local build succeeds: `pnpm build` ✅ (4.0s, 40 pages, 33 routes)
+- [x] No TypeScript errors: `pnpm tsc --noEmit` ✅
+- [x] Dev server starts: `pnpm dev` ✅
+- [x] functions/ directory still has its own tsconfig.json ✅
+- [x] functions/ dependencies remain separate ✅
+
+**Prevention:**
+1. **When enabling strict TypeScript checks:**
+   - Check `tsconfig.json` `include` patterns for overly broad globs
+   - Verify separate directories (functions/, scripts/) are excluded
+   - Test production build locally before deploying
+   
+2. **Phase 6 Build Hardening should have:**
+   - Reviewed tsconfig.json include/exclude arrays
+   - Excluded functions/ directory from Next.js compilation
+   - Documented this in PHASE_6_COMPLETE.md
+
+3. **Future agents:**
+   - Always exclude non-Next.js directories from root tsconfig.json
+   - Verify build locally matches Firebase App Hosting environment
+   - Check for separate package.json files (functions/, scripts/)
+
+**Files Changed:**
+- `tsconfig.json` - Added `"functions"` to exclude array
+
+**Related Errors:**
+- OPT-29: Next.js 15 Route Params Breaking Change (Phase 6)
+- OPT-30: Progressive Error Discovery in TypeScript Builds (Phase 6)
+- OPT-31: Empty Files Break Next.js Builds (Phase 6)
+
+**Lessons Learned:**
+1. **Lesson OPT-36A:** When enabling strict TypeScript, audit tsconfig.json include/exclude patterns
+2. **Lesson OPT-36B:** Separate directories with their own package.json should always be excluded from root tsconfig
+3. **Lesson OPT-36C:** Test production builds locally before deploying to Firebase App Hosting
+
+**Time to Resolve:** 15 minutes (analysis + fix + verification)
+
+**Git Commits:**
+- `9be4b31`: "fix(build): Exclude functions directory from Next.js TypeScript compilation"
+
+---
+
+### ERROR-OPT-001: [Placeholder - Available for Future Errors]
 **Date:** TBD  
 **Phase:** TBD  
 **Severity:** TBD  
 **Status:** N/A
 
 **Description:**
-No errors have been encountered yet. This file will be updated as optimization work progresses.
+Reserved for future error tracking.
 
 ---
 
