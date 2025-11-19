@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import { Header } from "@/components/header"
-import { Shield, Users, CreditCard, Settings, LogOut } from "lucide-react"
+import { Shield, Users, CreditCard, Settings, LogOut, BarChart, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { auth } from "@/lib/firebase/client"
 import { signOut } from "firebase/auth"
@@ -87,56 +87,53 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* Audit Log Link */}
-        <div className="mb-8">
-          <div className="bg-gradient-to-br from-amber-500/10 to-red-500/10 border border-amber-500/20 rounded-lg p-6">
+        {/* Admin Navigation Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          {/* Analytics Card */}
+          <div 
+            data-testid="analytics-card"
+            className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 rounded-lg p-6 cursor-pointer hover:border-blue-500/40 transition-all"
+            onClick={() => router.push('/admin/analytics')}
+          >
             <div className="flex items-center gap-3 mb-4">
-              <Settings className="w-8 h-8 text-amber-500" />
+              <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                <BarChart className="w-6 h-6 text-blue-400" />
+              </div>
               <div>
-                <h3 className="text-lg font-semibold text-foreground">Audit Log</h3>
-                <p className="text-sm text-muted-foreground">GDPR-compliant admin action history</p>
+                <h3 className="text-lg font-semibold text-foreground">Analytics</h3>
+                <p className="text-sm text-muted-foreground">Business metrics & insights</p>
               </div>
             </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              View comprehensive analytics including user metrics, test statistics, engagement data, and business performance.
+            </p>
             <Button 
-              onClick={() => router.push('/admin/audit-log')}
               className="w-full"
               variant="default"
             >
-              View Audit Log →
+              View Analytics →
             </Button>
           </div>
-        </div>
 
-        {/* Coming Soon Sections */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-card border border-border rounded-lg p-6">
-            <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
-              <Users className="w-5 h-5" />
-              User Management
-            </h2>
-            <p className="text-muted-foreground mb-4">
-              Manage user accounts, roles, and permissions.
-            </p>
-            <div className="space-y-2 mb-4">
-              <div className="flex items-center gap-2 text-sm text-foreground">
-                <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                View all users
+          {/* User Management Card */}
+          <div 
+            data-testid="users-card"
+            className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-lg p-6 cursor-pointer hover:border-purple-500/40 transition-all"
+            onClick={() => router.push('/admin/users')}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                <Users className="w-6 h-6 text-purple-400" />
               </div>
-              <div className="flex items-center gap-2 text-sm text-foreground">
-                <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                Search and filter users
-              </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                Edit user profiles
-              </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                Promote to admin
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">User Management</h3>
+                <p className="text-sm text-muted-foreground">Manage accounts & roles</p>
               </div>
             </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Search, filter, and manage user accounts. Edit profiles, promote to admin, manage permissions, and suspend accounts.
+            </p>
             <Button 
-              onClick={() => router.push('/admin/users')}
               className="w-full"
               variant="default"
             >
@@ -144,38 +141,55 @@ export default function AdminDashboardPage() {
             </Button>
           </div>
 
-          <div className="bg-card border border-border rounded-lg p-6">
-            <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
-              <CreditCard className="w-5 h-5" />
-              Subscription Management
-            </h2>
-            <p className="text-muted-foreground mb-4">
-              Manage subscription tiers and AI test limits.
-            </p>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                View all subscriptions
+          {/* Subscriptions Card */}
+          <div 
+            data-testid="subscriptions-card"
+            className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-lg p-6 cursor-pointer hover:border-green-500/40 transition-all"
+            onClick={() => router.push('/admin/subscriptions')}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center">
+                <CreditCard className="w-6 h-6 text-green-400" />
               </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                Upgrade/downgrade users
-              </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                Modify AI test limits
-              </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                View usage analytics
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">Subscriptions</h3>
+                <p className="text-sm text-muted-foreground">Manage tiers & limits</p>
               </div>
             </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              View all subscriptions, upgrade/downgrade users, modify AI test limits, and monitor usage across tiers.
+            </p>
             <Button 
-              onClick={() => router.push('/admin/subscriptions')}
-              className="w-full mt-4"
+              className="w-full"
               variant="default"
             >
               Manage Subscriptions →
+            </Button>
+          </div>
+
+          {/* Audit Log Card */}
+          <div 
+            data-testid="audit-card"
+            className="bg-gradient-to-br from-amber-500/10 to-red-500/10 border border-amber-500/20 rounded-lg p-6 cursor-pointer hover:border-amber-500/40 transition-all"
+            onClick={() => router.push('/admin/audit-log')}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-amber-500/20 rounded-lg flex items-center justify-center">
+                <FileText className="w-6 h-6 text-amber-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">Audit Log</h3>
+                <p className="text-sm text-muted-foreground">GDPR-compliant history</p>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Complete audit trail of admin actions with timestamps, IP addresses, and detailed change logs for compliance.
+            </p>
+            <Button 
+              className="w-full"
+              variant="default"
+            >
+              View Audit Log →
             </Button>
           </div>
         </div>
