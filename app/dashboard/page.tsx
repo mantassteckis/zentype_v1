@@ -1,5 +1,6 @@
 "use client"
 
+import dynamic from 'next/dynamic';
 import { GlassCard } from "@/components/ui/glass-card"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
@@ -10,7 +11,19 @@ import { useEffect, useState } from "react"
 import { calculateUserStats } from "@/lib/firebase/firestore"
 import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore"
 import { db } from "@/lib/firebase/client"
-import ProgressChart from "@/components/dashboard/progress-chart"
+
+// Dynamic import for ProgressChart (lazy load recharts library)
+const ProgressChart = dynamic(() => import('@/components/dashboard/progress-chart'), {
+  ssr: true,  // Keep SSR for better UX
+  loading: () => (
+    <div className="h-64 w-full flex items-center justify-center">
+      <div className="text-center space-y-3">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#00BFFF] mx-auto"></div>
+        <p className="text-sm text-muted-foreground">Loading chart...</p>
+      </div>
+    </div>
+  )
+});
 
 export default function DashboardPage() {
   const { user, profile, isLoading } = useAuth();
@@ -34,6 +47,7 @@ export default function DashboardPage() {
   }>>([]);
 
   const [progressData, setProgressData] = useState<Array<{
+    id: string;
     date: string;
     wpm: number;
     accuracy: number;
