@@ -161,7 +161,7 @@ export default function AdminUsersPage() {
             </div>
           </div>
           <Button 
-            onClick={() => router.push('/admin/dashboard')}
+            onClick={() => router.push('/admin')}
             variant="outline"
           >
             ← Back to Dashboard

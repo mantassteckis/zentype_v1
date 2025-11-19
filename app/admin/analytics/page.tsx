@@ -157,7 +157,7 @@ export default function AnalyticsPage() {
       <div className="mb-6">
         <Button
           variant="ghost"
-          onClick={() => router.push('/admin/dashboard')}
+          onClick={() => router.push('/admin')}
           className="mb-4"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />

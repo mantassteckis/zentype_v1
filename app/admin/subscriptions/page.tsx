@@ -214,7 +214,7 @@ export default function AdminSubscriptionsPage() {
         <div className="mb-8">
           <Button
             variant="ghost"
-            onClick={() => router.push('/admin/dashboard')}
+            onClick={() => router.push('/admin')}
             className="mb-4"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
