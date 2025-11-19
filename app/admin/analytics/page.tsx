@@ -18,7 +18,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { useRouter } from 'next/navigation';
 import { auth } from '@/lib/firebase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -58,6 +58,42 @@ interface AnalyticsData {
   cached?: boolean;
 }
 
+// Memoized metric card to prevent re-renders when data hasn't changed
+const MetricCard = memo(({ 
+  icon: Icon, 
+  title, 
+  value, 
+  subtitle, 
+  iconColor, 
+  valueColor 
+}: { 
+  icon: any; 
+  title: string; 
+  value: string; 
+  subtitle: string; 
+  iconColor?: string; 
+  valueColor?: string;
+}) => (
+  <Card>
+    <CardHeader className="pb-2">
+      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+        <Icon className={`w-4 h-4 ${iconColor || ''}`} />
+        {title}
+      </CardTitle>
+    </CardHeader>
+    <CardContent>
+      <div className={`text-3xl font-bold ${valueColor || ''}`}>
+        {value}
+      </div>
+      <p className="text-xs text-muted-foreground mt-1">
+        {subtitle}
+      </p>
+    </CardContent>
+  </Card>
+));
+
+MetricCard.displayName = 'MetricCard';
+
 export default function AnalyticsPage() {
   const router = useRouter();
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
@@ -65,6 +101,17 @@ export default function AnalyticsPage() {
   const [error, setError] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
+
+  // Memoize expensive percentage calculations to prevent re-computation on every render
+  const premiumPercentage = useMemo(() => {
+    if (!analytics || analytics.totalUsers === 0) return '0% of users';
+    return `${Math.round((analytics.premiumUsers / analytics.totalUsers) * 100)}% of users`;
+  }, [analytics?.premiumUsers, analytics?.totalUsers]);
+
+  const freePercentage = useMemo(() => {
+    if (!analytics || analytics.totalUsers === 0) return '0% of users';
+    return `${Math.round((analytics.freeUsers / analytics.totalUsers) * 100)}% of users`;
+  }, [analytics?.freeUsers, analytics?.totalUsers]);
 
   useEffect(() => {
     fetchAnalytics();
@@ -121,15 +168,15 @@ export default function AnalyticsPage() {
     }
   };
 
-  const handleManualRefresh = () => {
+  const handleManualRefresh = useCallback(() => {
     fetchAnalytics(true);
-  };
+  }, []);
 
-  const formatNumber = (num: number): string => {
+  const formatNumber = useCallback((num: number): string => {
     return num.toLocaleString();
-  };
+  }, []);
 
-  const getHealthIcon = (status: 'healthy' | 'degraded' | 'down') => {
+  const getHealthIcon = useCallback((status: 'healthy' | 'degraded' | 'down') => {
     switch (status) {
       case 'healthy':
         return <CheckCircle2 className="w-5 h-5 text-green-500" />;
@@ -138,9 +185,9 @@ export default function AnalyticsPage() {
       case 'down':
         return <XCircle className="w-5 h-5 text-red-500" />;
     }
-  };
+  }, []);
 
-  const getHealthBadgeVariant = (status: 'healthy' | 'degraded' | 'down'): string => {
+  const getHealthBadgeVariant = useCallback((status: 'healthy' | 'degraded' | 'down'): string => {
     switch (status) {
       case 'healthy':
         return 'default'; // Green
@@ -149,7 +196,7 @@ export default function AnalyticsPage() {
       case 'down':
         return 'destructive'; // Red
     }
-  };
+  }, []);
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
@@ -263,9 +310,7 @@ export default function AnalyticsPage() {
                   {formatNumber(analytics.premiumUsers)}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {analytics.totalUsers > 0 
-                    ? `${Math.round((analytics.premiumUsers / analytics.totalUsers) * 100)}% of users`
-                    : '0% of users'}
+                  {premiumPercentage}
                 </p>
               </CardContent>
             </Card>
@@ -374,9 +419,7 @@ export default function AnalyticsPage() {
               <CardContent>
                 <div className="text-3xl font-bold">{formatNumber(analytics.freeUsers)}</div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {analytics.totalUsers > 0 
-                    ? `${Math.round((analytics.freeUsers / analytics.totalUsers) * 100)}% of users`
-                    : '0% of users'}
+                  {freePercentage}
                 </p>
               </CardContent>
             </Card>

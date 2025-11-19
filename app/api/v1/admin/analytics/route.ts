@@ -286,8 +286,9 @@ async function fetchAnalytics(): Promise<AnalyticsResponse> {
 /**
  * Helper: Clear analytics cache (useful for testing or manual refresh)
  * Can be called from admin tools or scheduled tasks
+ * NOTE: Not exported to avoid Next.js route validation errors
  */
-export function clearAnalyticsCache(): void {
+function clearAnalyticsCache(): void {
   cachedAnalytics = null;
   cacheTimestamp = 0;
   console.info('[AnalyticsAPI] Cache cleared');
