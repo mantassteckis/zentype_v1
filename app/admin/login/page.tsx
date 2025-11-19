@@ -57,7 +57,7 @@ export default function AdminLoginPage() {
       })
       
       // Step 4: Redirect to admin dashboard
-      router.push("/admin/dashboard")
+      router.push("/admin")
     } catch (error: any) {
       console.error("[Admin Login] Login failed:", error)
       

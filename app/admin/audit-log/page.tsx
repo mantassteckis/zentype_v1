@@ -9,7 +9,15 @@
  * - Real-time audit log streaming
  * - Multi-field filtering (date range, admin, action, severity)
  * - Severity color-coding (INFO→EMERGENCY)
- * - Expandable change diffs (before/after)
+ * - Expa      <div className="mb-8">
+        <Button
+          variant="ghost"
+          onClick={() => router.push('/admin')}
+          className="mb-4"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Dashboard
+        </Button>ange diffs (before/after)
  * - CSV export with GDPR compliance notice
  * - Pagination with configurable page size
  * 
@@ -361,7 +369,7 @@ export default function AuditLogPage() {
       <div className="mb-6">
         <Button
           variant="ghost"
-          onClick={() => router.push('/admin/dashboard')}
+          onClick={() => router.push('/admin')}
           className="mb-4"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
